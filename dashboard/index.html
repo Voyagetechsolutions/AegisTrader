@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <title>Aegis Trader</title>
+  <meta name="description" content="Aegis Trader – US30 Automated Trading Dashboard" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <!-- ── Header ─────────────────────────────────────────── -->
+  <header class="header">
+    <div class="header-left">
+      <div class="logo">
+        <span class="logo-icon">⚡</span>
+        <span class="logo-text">Aegis Trader</span>
+      </div>
+      <span class="symbol-badge">US30</span>
+    </div>
+    <div class="header-right">
+      <div class="connection-dot" id="connDot" title="Backend connection"></div>
+      <button class="btn-icon" id="refreshBtn" title="Refresh">↻</button>
+    </div>
+  </header>
+
+  <!-- ── Status Bar ──────────────────────────────────────── -->
+  <div class="status-bar" id="statusBar">
+    <div class="status-item">
+      <span class="status-label">Mode</span>
+      <span class="status-value" id="modeVal">—</span>
+    </div>
+    <div class="status-item">
+      <span class="status-label">Session</span>
+      <span class="status-value" id="sessionVal">—</span>
+    </div>
+    <div class="status-item">
+      <span class="status-label">Trades</span>
+      <span class="status-value" id="tradesVal">0/2</span>
+    </div>
+    <div class="status-item">
+      <span class="status-label">Drawdown</span>
+      <span class="status-value" id="ddVal">0.00%</span>
+    </div>
+  </div>
+
+  <!-- ── Alert Banner ────────────────────────────────────── -->
+  <div class="alert-banner hidden" id="alertBanner"></div>
+
+  <!-- ── Tab Navigation ──────────────────────────────────── -->
+  <nav class="tab-nav">
+    <button class="tab-btn active" data-tab="overview">Overview</button>
+    <button class="tab-btn" data-tab="signals">Signals</button>
+    <button class="tab-btn" data-tab="trades">Trades</button>
+    <button class="tab-btn" data-tab="settings">Settings</button>
+  </nav>
+
+  <!-- ── Main Content ────────────────────────────────────── -->
+  <main class="content">
+
+    <!-- Overview Tab ─────────────────────────────────────── -->
+    <section id="tab-overview" class="tab-content active">
+      <!-- Quick Controls -->
+      <div class="card">
+        <div class="card-title">Quick Controls</div>
+        <div class="mode-grid">
+          <button class="mode-btn" data-mode="analyze" id="modeAnalyze">
+            <span class="mode-icon">🔍</span>
+            <span>Analyze</span>
+          </button>
+          <button class="mode-btn" data-mode="trade" id="modeTrade">
+            <span class="mode-icon">⚡</span>
+            <span>Trade</span>
+          </button>
+          <button class="mode-btn" data-mode="swing" id="modeSwing">
+            <span class="mode-icon">📈</span>
+            <span>Swing</span>
+          </button>
+          <button class="mode-btn danger" id="btnCloseAll">
+            <span class="mode-icon">🔒</span>
+            <span>Close All</span>
+          </button>
+        </div>
+
+        <div class="auto-trade-row">
+          <span class="auto-label">Auto Trading</span>
+          <label class="toggle">
+            <input type="checkbox" id="autoTradeToggle" />
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+      </div>
+
+      <!-- Risk Dashboard -->
+      <div class="card">
+        <div class="card-title">Risk Status</div>
+        <div class="risk-grid">
+          <div class="risk-item">
+            <div class="risk-value" id="riskTrades">0/2</div>
+            <div class="risk-label">Trades Today</div>
+          </div>
+          <div class="risk-item">
+            <div class="risk-value" id="riskLosses">0/2</div>
+            <div class="risk-label">Losses Today</div>
+          </div>
+          <div class="risk-item">
+            <div class="risk-value" id="riskDD">0.00%</div>
+            <div class="risk-label">Drawdown</div>
+          </div>
+          <div class="risk-item">
+            <div class="risk-value" id="riskPos">0</div>
+            <div class="risk-label">Open Positions</div>
+          </div>
+        </div>
+        <div class="risk-bar-wrap">
+          <div class="risk-bar-track">
+            <div class="risk-bar-fill" id="riskBarFill"></div>
+          </div>
+          <span class="risk-bar-label">Drawdown Limit: 2%</span>
+        </div>
+      </div>
+
+      <!-- Live Positions -->
+      <div class="card">
+        <div class="card-title">
+          Live Positions
+          <span class="badge" id="posCount">0</span>
+        </div>
+        <div id="positionsList" class="positions-list">
+          <div class="empty-state">No open positions</div>
+        </div>
+      </div>
+
+      <!-- Paper Trade Stats (Analyze Mode Performance) -->
+      <div class="card">
+        <div class="card-title">Paper Trade Performance (30d)</div>
+        <div id="paperTradeStats" class="paper-stats">
+          <div class="empty-state">No paper trades yet</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Signals Tab ──────────────────────────────────────── -->
+    <section id="tab-signals" class="tab-content">
+      <div class="card">
+        <div class="card-title">
+          Recent Signals
+          <span class="badge" id="signalCount">0</span>
+        </div>
+        <div id="signalsList" class="signal-list">
+          <div class="empty-state">No signals yet</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Trades Tab ───────────────────────────────────────── -->
+    <section id="tab-trades" class="tab-content">
+      <div class="card">
+        <div class="card-title">
+          Trade History
+          <span class="badge" id="tradeCount">0</span>
+        </div>
+        <div id="tradesList" class="trade-list">
+          <div class="empty-state">No trades recorded</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Settings Tab ─────────────────────────────────────── -->
+    <section id="tab-settings" class="tab-content">
+      <div class="card">
+        <div class="card-title">Risk Settings</div>
+        <form id="riskForm" class="settings-form">
+          <div class="form-group">
+            <label class="form-label">Lot Mode</label>
+            <select class="form-input" id="setLotMode">
+              <option value="minimum_lot">Minimum Lot (0.01)</option>
+              <option value="fixed_lot">Fixed Lot</option>
+              <option value="risk_percent">Risk Percent</option>
+            </select>
+          </div>
+          <div class="form-group" id="fixedLotGroup" style="display:none">
+            <label class="form-label">Fixed Lot Size</label>
+            <input type="number" class="form-input" id="setFixedLot" step="0.01" min="0.01" max="10" placeholder="0.1" />
+          </div>
+          <div class="form-group" id="riskPctGroup" style="display:none">
+            <label class="form-label">Risk per Trade (%)</label>
+            <input type="number" class="form-input" id="setRiskPct" step="0.1" min="0.1" max="5" placeholder="1.0" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Max Trades / Day</label>
+            <input type="number" class="form-input" id="setMaxTrades" min="1" max="10" placeholder="2" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Max Losses / Day</label>
+            <input type="number" class="form-input" id="setMaxLosses" min="1" max="10" placeholder="2" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Drawdown Limit (%)</label>
+            <input type="number" class="form-input" id="setMaxDD" step="0.1" min="0.5" max="10" placeholder="2.0" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Max Spread (points)</label>
+            <input type="number" class="form-input" id="setMaxSpread" step="0.5" min="1" placeholder="5" />
+          </div>
+          <button type="submit" class="btn-primary">Save Settings</button>
+        </form>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Session Windows (SAST)</div>
+        <div class="sessions-info">
+          <div class="session-row">
+            <span class="session-name">🇬🇧 London</span>
+            <span class="session-time">10:00 – 13:00</span>
+          </div>
+          <div class="session-row">
+            <span class="session-name">🇺🇸 New York</span>
+            <span class="session-time">15:30 – 17:30</span>
+          </div>
+          <div class="session-row">
+            <span class="session-name">⚡ Power Hour</span>
+            <span class="session-time">20:00 – 22:00</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">About</div>
+        <div class="about-text">
+          <p>Aegis Trader v1.0</p>
+          <p>US30 Automated Trading System</p>
+          <p class="version-note">Backend: <span id="backendUrl">Not connected</span></p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- ── Toast ──────────────────────────────────────────── -->
+  <div class="toast hidden" id="toast"></div>
+
+  <script src="js/api.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

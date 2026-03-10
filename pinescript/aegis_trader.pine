@@ -1,0 +1,463 @@
+// ============================================================
+// Aegis Trader v1.0 – US30 Strategy Indicator
+// Pine Script v5
+// 
+// Detects high-probability setups using:
+//   - 250 & 125 point price levels
+//   - Fair Value Gaps (FVG)
+//   - Liquidity sweeps
+//   - Market structure shifts (BOS/CHoCH)
+//   - Displacement candles
+//   - Multi-timeframe EMA bias
+//
+// Fires a webhook alert with full JSON payload when a setup qualifies.
+// ============================================================
+
+//@version=6
+indicator("Aegis Trader v2 - US30 Confluence Engine", shorttitle="AegisTrader v2", overlay=true, max_lines_count=200, max_boxes_count=100, max_labels_count=100)
+
+//============================================================================
+// INPUTS
+//============================================================================
+groupGen    = "General"
+groupLvl    = "Levels"
+groupBias   = "Bias"
+groupFVG    = "FVG"
+groupStruct = "Structure"
+groupRisk   = "Signal / Targets"
+groupSess   = "Sessions"
+groupViz    = "Visuals"
+
+webhookSecret    = input.string("changeme", "Webhook Secret", group=groupGen)
+entryTfOnly5m    = input.bool(true, "Warn if chart is not 5M", group=groupGen)
+strictAPlusOnly  = input.bool(true, "Only fire A+ signals", group=groupGen)
+
+show250Levels     = input.bool(true, "Show 250 levels", group=groupLvl)
+show125Levels     = input.bool(true, "Show 125 levels", group=groupLvl)
+levelTolerance250 = input.float(30.0, "250 level tolerance", minval=1, group=groupLvl)
+levelTolerance125 = input.float(20.0, "125 level tolerance", minval=1, group=groupLvl)
+
+weeklyTf = input.timeframe("W", "Weekly TF", group=groupBias)
+dailyTf  = input.timeframe("D", "Daily TF", group=groupBias)
+h4Tf     = input.timeframe("240", "4H TF", group=groupBias)
+h1Tf     = input.timeframe("60", "1H TF", group=groupBias)
+emaLen   = input.int(50, "EMA length", minval=1, group=groupBias)
+
+fvgMinSize    = input.float(20.0, "Minimum FVG size", minval=0.1, group=groupFVG)
+maxStoredFvgs = input.int(15, "Max stored FVGs", minval=1, maxval=50, group=groupFVG)
+
+pivotLen      = input.int(3, "Pivot strength", minval=2, maxval=10, group=groupStruct)
+dispAtrMult   = input.float(1.2, "Displacement ATR multiplier", minval=0.1, step=0.1, group=groupStruct)
+wickToBodyMax = input.float(0.35, "Max wick/body ratio", minval=0.01, step=0.01, group=groupStruct)
+
+slBuffer      = input.float(25.0, "SL buffer points", minval=0.0, group=groupRisk)
+tp1RR         = input.float(1.5, "TP1 RR", minval=0.1, step=0.1, group=groupRisk)
+tp2RR         = input.float(3.0, "TP2 RR", minval=0.1, step=0.1, group=groupRisk)
+minScoreA     = input.int(75, "A minimum score", minval=0, maxval=100, group=groupRisk)
+minScoreAPlus = input.int(85, "A+ minimum score", minval=0, maxval=100, group=groupRisk)
+
+enableLondon     = input.bool(true, "Enable London", group=groupSess)
+enableNewYork    = input.bool(true, "Enable New York", group=groupSess)
+enablePowerHour  = input.bool(true, "Enable Power Hour", group=groupSess)
+tzInput          = input.string("Africa/Johannesburg", "Session timezone", group=groupSess)
+londonSession    = input.session("1000-1300", "London", group=groupSess)
+newYorkSession   = input.session("1530-1730", "New York", group=groupSess)
+powerHourSession = input.session("2000-2200", "Power Hour", group=groupSess)
+
+showDashboard = input.bool(true, "Show dashboard", group=groupViz)
+showFvgs      = input.bool(true, "Show active FVGs", group=groupViz)
+showSignals   = input.bool(true, "Show signal markers", group=groupViz)
+showBiasLine  = input.bool(true, "Show H1 EMA", group=groupViz)
+
+//============================================================================
+// HELPERS
+//============================================================================
+roundToStep(x, step) =>
+    math.round(x / step) * step
+
+floorToStep(x, step) =>
+    math.floor(x / step) * step
+
+nearLevel(price, step, tolerance) =>
+    snapped = roundToStep(price, step)
+    math.abs(price - snapped) <= tolerance
+
+boolToJson(v) =>
+    v ? "true" : "false"
+
+strBias(b) =>
+    b > 0 ? "bull" : b < 0 ? "bear" : "neutral"
+
+safeStrFloat(v) =>
+    str.tostring(v, format.mintick)
+
+inSession(sess) =>
+    not na(time(timeframe.period, sess, tzInput))
+
+//============================================================================
+// SESSION STATE
+//============================================================================
+isLondon    = enableLondon and inSession(londonSession)
+isNewYork   = enableNewYork and inSession(newYorkSession)
+isPowerHour = enablePowerHour and inSession(powerHourSession)
+sessionOk   = isLondon or isNewYork or isPowerHour
+sessionName = isLondon ? "london" : isNewYork ? "new_york" : isPowerHour ? "power_hour" : "off"
+
+//============================================================================
+// LEVELS
+//============================================================================
+nearest250Below = floorToStep(close, 250.0)
+level250        = roundToStep(close, 250.0)
+level125        = roundToStep(close, 125.0)
+
+near250 = nearLevel(close, 250.0, levelTolerance250)
+near125 = nearLevel(close, 125.0, levelTolerance125) and not near250
+
+if barstate.islast
+    if show250Levels
+        for i = -3 to 3
+            lv = nearest250Below + i * 250.0
+            line.new(bar_index - 80, lv, bar_index + 10, lv, extend=extend.none, color=color.new(color.orange, 55), width=2)
+    if show125Levels
+        for i = -6 to 6
+            lv = nearest250Below + i * 125.0
+            isMajorLevel = math.abs(roundToStep(lv, 250.0) - lv) < 0.0001
+            if not isMajorLevel
+                line.new(bar_index - 80, lv, bar_index + 10, lv, extend=extend.none, color=color.new(color.orange, 78), width=1, style=line.style_dashed)
+
+//============================================================================
+// HTF BIAS
+//============================================================================
+getBias(tf) =>
+    tfClose = request.security(syminfo.tickerid, tf, close)
+    tfEma   = request.security(syminfo.tickerid, tf, ta.ema(close, emaLen))
+    tfClose > tfEma ? 1 : tfClose < tfEma ? -1 : 0
+
+weeklyBias = getBias(weeklyTf)
+dailyBias  = getBias(dailyTf)
+h4Bias     = getBias(h4Tf)
+h1Bias     = getBias(h1Tf)
+
+h1Ema = request.security(syminfo.tickerid, h1Tf, ta.ema(close, emaLen))
+
+plot(
+     showBiasLine ? h1Ema : na,
+     title="H1 EMA",
+     color=h1Bias > 0 ? color.new(color.lime, 0) : h1Bias < 0 ? color.new(color.red, 0) : color.new(color.gray, 0),
+     linewidth=2
+)
+
+bullBiasStrong = weeklyBias >= 0 and dailyBias > 0 and h4Bias > 0 and h1Bias > 0
+bearBiasStrong = weeklyBias <= 0 and dailyBias < 0 and h4Bias < 0 and h1Bias < 0
+
+//============================================================================
+// FVG STORAGE
+//============================================================================
+var bullTopArr  = array.new_float()
+var bullBotArr  = array.new_float()
+var bullBarArr  = array.new_int()
+var bearTopArr  = array.new_float()
+var bearBotArr  = array.new_float()
+var bearBarArr  = array.new_int()
+
+bullFvgNow = low > high[2] and (low - high[2]) >= fvgMinSize
+bearFvgNow = high < low[2] and (low[2] - high) >= fvgMinSize
+
+if bullFvgNow
+    array.push(bullTopArr, low)
+    array.push(bullBotArr, high[2])
+    array.push(bullBarArr, bar_index)
+    if array.size(bullTopArr) > maxStoredFvgs
+        array.shift(bullTopArr)
+        array.shift(bullBotArr)
+        array.shift(bullBarArr)
+
+if bearFvgNow
+    array.push(bearTopArr, low[2])
+    array.push(bearBotArr, high)
+    array.push(bearBarArr, bar_index)
+    if array.size(bearTopArr) > maxStoredFvgs
+        array.shift(bearTopArr)
+        array.shift(bearBotArr)
+        array.shift(bearBarArr)
+
+var bool inBullFvg = false
+var bool inBearFvg = false
+var float activeBullTop = na
+var float activeBullBot = na
+var float activeBearTop = na
+var float activeBearBot = na
+
+inBullFvg := false
+activeBullTop := na
+activeBullBot := na
+if array.size(bullTopArr) > 0
+    for i = array.size(bullTopArr) - 1 to 0
+        top = array.get(bullTopArr, i)
+        bot = array.get(bullBotArr, i)
+        if close <= top and close >= bot
+            inBullFvg := true
+            activeBullTop := top
+            activeBullBot := bot
+            break
+
+inBearFvg := false
+activeBearTop := na
+activeBearBot := na
+if array.size(bearTopArr) > 0
+    for i = array.size(bearTopArr) - 1 to 0
+        top = array.get(bearTopArr, i)
+        bot = array.get(bearBotArr, i)
+        if close <= top and close >= bot
+            inBearFvg := true
+            activeBearTop := top
+            activeBearBot := bot
+            break
+
+if showFvgs and barstate.islast
+    if not na(activeBullTop) and not na(activeBullBot)
+        box.new(bar_index - 10, activeBullTop, bar_index + 6, activeBullBot, bgcolor=color.new(color.lime, 85), border_color=color.new(color.lime, 40))
+    if not na(activeBearTop) and not na(activeBearBot)
+        box.new(bar_index - 10, activeBearTop, bar_index + 6, activeBearBot, bgcolor=color.new(color.red, 85), border_color=color.new(color.red, 40))
+
+//============================================================================
+// SWEEPS + STRUCTURE
+//============================================================================
+ph = ta.pivothigh(high, pivotLen, pivotLen)
+pl = ta.pivotlow(low, pivotLen, pivotLen)
+
+var float lastPivotHigh = na
+var float lastPivotLow  = na
+
+if not na(ph)
+    lastPivotHigh := ph
+if not na(pl)
+    lastPivotLow := pl
+
+bullSweep = not na(lastPivotLow) and low < lastPivotLow and close > lastPivotLow
+bearSweep = not na(lastPivotHigh) and high > lastPivotHigh and close < lastPivotHigh
+
+bullBos = not na(lastPivotHigh) and close > lastPivotHigh and close[1] <= lastPivotHigh
+bearBos = not na(lastPivotLow) and close < lastPivotLow and close[1] >= lastPivotLow
+
+bullMssCont = bullBos and h1Bias > 0
+bearMssCont = bearBos and h1Bias < 0
+
+bullChochRev = bullBos and h1Bias < 0
+bearChochRev = bearBos and h1Bias > 0
+
+//============================================================================
+// DISPLACEMENT
+//============================================================================
+atr = ta.atr(14)
+body = math.abs(close - open)
+upperWick = high - math.max(open, close)
+lowerWick = math.min(open, close) - low
+
+bullDisp = close > open and body >= atr * dispAtrMult and upperWick <= body * wickToBodyMax
+bearDisp = close < open and body >= atr * dispAtrMult and lowerWick <= body * wickToBodyMax
+
+bullDispValid = bullDisp or bullDisp[1]
+bearDispValid = bearDisp or bearDisp[1]
+
+//============================================================================
+// SCORING
+//============================================================================
+longScore =
+     (bullBiasStrong ? 20 : 0) +
+     (near250 ? 15 : 0) +
+     (near125 ? 10 : 0) +
+     (bullSweep ? 15 : 0) +
+     (inBullFvg ? 15 : 0) +
+     (bullDispValid ? 10 : 0) +
+     (bullMssCont ? 10 : 0) +
+     (sessionOk ? 5 : 0)
+
+shortScore =
+     (bearBiasStrong ? 20 : 0) +
+     (near250 ? 15 : 0) +
+     (near125 ? 10 : 0) +
+     (bearSweep ? 15 : 0) +
+     (inBearFvg ? 15 : 0) +
+     (bearDispValid ? 10 : 0) +
+     (bearMssCont ? 10 : 0) +
+     (sessionOk ? 5 : 0)
+
+longGrade = longScore >= minScoreAPlus ? "A+" : longScore >= minScoreA ? "A" : "B"
+shortGrade = shortScore >= minScoreAPlus ? "A+" : shortScore >= minScoreA ? "A" : "B"
+
+//============================================================================
+// SETUP RULES
+//============================================================================
+is5m = timeframe.period == "5"
+warnTf = entryTfOnly5m and not is5m
+
+longAPlus = (
+    bullBiasStrong and
+    (near250 or near125) and
+    bullSweep and
+    inBullFvg and
+    bullDispValid and
+    bullMssCont and
+    sessionOk and
+    longScore >= minScoreAPlus
+)
+
+shortAPlus = (
+    bearBiasStrong and
+    (near250 or near125) and
+    bearSweep and
+    inBearFvg and
+    bearDispValid and
+    bearMssCont and
+    sessionOk and
+    shortScore >= minScoreAPlus
+)
+
+longA = (
+    not longAPlus and
+    bullBiasStrong and
+    (near250 or near125) and
+    bullSweep and
+    bullMssCont and
+    longScore >= minScoreA
+)
+
+shortA = (
+    not shortAPlus and
+    bearBiasStrong and
+    (near250 or near125) and
+    bearSweep and
+    bearMssCont and
+    shortScore >= minScoreA
+)
+
+confirmedLongAPlus  = barstate.isconfirmed and is5m and longAPlus
+confirmedShortAPlus = barstate.isconfirmed and is5m and shortAPlus
+confirmedLongA      = barstate.isconfirmed and is5m and longA
+confirmedShortA     = barstate.isconfirmed and is5m and shortA
+
+//============================================================================
+// ENTRY / SL / TP
+//============================================================================
+longEntry = close
+longSl    = math.min(ta.lowest(low, 5), nz(lastPivotLow, low)) - slBuffer
+longRisk  = math.max(longEntry - longSl, syminfo.mintick)
+longTp1   = longEntry + longRisk * tp1RR
+longTp2   = longEntry + longRisk * tp2RR
+
+shortEntry = close
+shortSl    = math.max(ta.highest(high, 5), nz(lastPivotHigh, high)) + slBuffer
+shortRisk  = math.max(shortSl - shortEntry, syminfo.mintick)
+shortTp1   = shortEntry - shortRisk * tp1RR
+shortTp2   = shortEntry - shortRisk * tp2RR
+
+//============================================================================
+// VISUAL SIGNALS
+//============================================================================
+plotshape(showSignals and confirmedLongAPlus, title="A+ Long", style=shape.triangleup, location=location.belowbar, color=color.new(color.lime, 0), size=size.small, text="A+L")
+plotshape(showSignals and confirmedShortAPlus, title="A+ Short", style=shape.triangledown, location=location.abovebar, color=color.new(color.red, 0), size=size.small, text="A+S")
+plotshape(showSignals and not strictAPlusOnly and confirmedLongA, title="A Long", style=shape.circle, location=location.belowbar, color=color.new(color.orange, 0), size=size.tiny, text="AL")
+plotshape(showSignals and not strictAPlusOnly and confirmedShortA, title="A Short", style=shape.circle, location=location.abovebar, color=color.new(color.orange, 0), size=size.tiny, text="AS")
+
+if warnTf and barstate.islast
+    label.new(bar_index, high, "Use on 5M chart", style=label.style_label_down, color=color.new(color.red, 0), textcolor=color.white)
+
+//============================================================================
+// ALERT PAYLOADS
+//============================================================================
+buildPayload(direction, grade, score, entryPrice, slPrice, tp1Price, tp2Price, isNear250, isNear125, sweep, fvg, disp, mssCont, chochRev) =>
+    payload = (
+        "{" +
+        "\"secret\":\"" + webhookSecret + "\"," +
+        "\"symbol\":\"" + syminfo.ticker + "\"," +
+        "\"tv_tickerid\":\"" + syminfo.tickerid + "\"," +
+        "\"direction\":\"" + direction + "\"," +
+        "\"grade\":\"" + grade + "\"," +
+        "\"score\":" + str.tostring(score) + "," +
+        "\"timeframe\":\"" + timeframe.period + "\"," +
+        "\"session_name\":\"" + sessionName + "\"," +
+        "\"entry_price\":" + safeStrFloat(entryPrice) + "," +
+        "\"sl_price\":" + safeStrFloat(slPrice) + "," +
+        "\"tp1_price\":" + safeStrFloat(tp1Price) + "," +
+        "\"tp2_price\":" + safeStrFloat(tp2Price) + "," +
+        "\"level_250_price\":" + safeStrFloat(level250) + "," +
+        "\"level_125_price\":" + safeStrFloat(level125) + "," +
+        "\"near_250\":" + boolToJson(isNear250) + "," +
+        "\"near_125\":" + boolToJson(isNear125) + "," +
+        "\"liquidity_sweep\":" + boolToJson(sweep) + "," +
+        "\"fvg_retest\":" + boolToJson(fvg) + "," +
+        "\"displacement\":" + boolToJson(disp) + "," +
+        "\"mss_continuation\":" + boolToJson(mssCont) + "," +
+        "\"choch_reversal\":" + boolToJson(chochRev) + "," +
+        "\"weekly_bias\":\"" + strBias(weeklyBias) + "\"," +
+        "\"daily_bias\":\"" + strBias(dailyBias) + "\"," +
+        "\"h4_bias\":\"" + strBias(h4Bias) + "\"," +
+        "\"h1_bias\":\"" + strBias(h1Bias) + "\"," +
+        "\"bar_time\":\"" + str.tostring(time) + "\"," +
+        "\"bar_confirmed\":" + boolToJson(barstate.isconfirmed) +
+        "}"
+    )
+    payload
+
+longAPlusPayload  = buildPayload("long", "A+", longScore, longEntry, longSl, longTp1, longTp2, near250, near125, bullSweep, inBullFvg, bullDispValid, bullMssCont, bullChochRev)
+shortAPlusPayload = buildPayload("short", "A+", shortScore, shortEntry, shortSl, shortTp1, shortTp2, near250, near125, bearSweep, inBearFvg, bearDispValid, bearMssCont, bearChochRev)
+longAPayload      = buildPayload("long", "A", longScore, longEntry, longSl, longTp1, longTp2, near250, near125, bullSweep, inBullFvg, bullDispValid, bullMssCont, bullChochRev)
+shortAPayload     = buildPayload("short", "A", shortScore, shortEntry, shortSl, shortTp1, shortTp2, near250, near125, bearSweep, inBearFvg, bearDispValid, bearMssCont, bearChochRev)
+
+//============================================================================
+// ALERTS
+//============================================================================
+if confirmedLongAPlus
+    alert(longAPlusPayload, alert.freq_once_per_bar_close)
+
+if confirmedShortAPlus
+    alert(shortAPlusPayload, alert.freq_once_per_bar_close)
+
+if not strictAPlusOnly and confirmedLongA
+    alert(longAPayload, alert.freq_once_per_bar_close)
+
+if not strictAPlusOnly and confirmedShortA
+    alert(shortAPayload, alert.freq_once_per_bar_close)
+
+//============================================================================
+// DASHBOARD
+//============================================================================
+if showDashboard and barstate.islast
+    var table dash = table.new(position.top_right, 2, 11, bgcolor=color.new(color.black, 10), border_width=1)
+
+    table.cell(dash, 0, 0, "AEGIS TRADER v2", text_color=color.white, bgcolor=color.new(color.purple, 20))
+    table.cell(dash, 1, 0, syminfo.ticker + " / " + timeframe.period, text_color=color.white, bgcolor=color.new(color.purple, 20))
+
+    table.cell(dash, 0, 1, "Weekly", text_color=color.silver)
+    table.cell(dash, 1, 1, strBias(weeklyBias), text_color=weeklyBias > 0 ? color.lime : weeklyBias < 0 ? color.red : color.gray)
+
+    table.cell(dash, 0, 2, "Daily", text_color=color.silver)
+    table.cell(dash, 1, 2, strBias(dailyBias), text_color=dailyBias > 0 ? color.lime : dailyBias < 0 ? color.red : color.gray)
+
+    table.cell(dash, 0, 3, "4H / 1H", text_color=color.silver)
+    table.cell(dash, 1, 3, strBias(h4Bias) + " / " + strBias(h1Bias), text_color=h1Bias > 0 ? color.lime : h1Bias < 0 ? color.red : color.gray)
+
+    table.cell(dash, 0, 4, "Session", text_color=color.silver)
+    table.cell(dash, 1, 4, sessionName, text_color=sessionOk ? color.lime : color.orange)
+
+    table.cell(dash, 0, 5, "Near 250 / 125", text_color=color.silver)
+    table.cell(dash, 1, 5, (near250 ? "Y" : "N") + " / " + (near125 ? "Y" : "N"), text_color=(near250 or near125) ? color.lime : color.gray)
+
+    table.cell(dash, 0, 6, "Sweep", text_color=color.silver)
+    table.cell(dash, 1, 6, bullSweep ? "bull" : bearSweep ? "bear" : "none", text_color=(bullSweep or bearSweep) ? color.lime : color.gray)
+
+    table.cell(dash, 0, 7, "FVG", text_color=color.silver)
+    table.cell(dash, 1, 7, inBullFvg ? "bull" : inBearFvg ? "bear" : "none", text_color=(inBullFvg or inBearFvg) ? color.lime : color.gray)
+
+    table.cell(dash, 0, 8, "Disp", text_color=color.silver)
+    table.cell(dash, 1, 8, bullDispValid ? "bull" : bearDispValid ? "bear" : "none", text_color=(bullDispValid or bearDispValid) ? color.lime : color.gray)
+
+    activeScore = math.max(longScore, shortScore)
+    activeGrade = longAPlus ? "A+" : shortAPlus ? "A+" : longA ? "A" : shortA ? "A" : "B"
+
+    table.cell(dash, 0, 9, "Score", text_color=color.silver)
+    table.cell(dash, 1, 9, str.tostring(activeScore) + " / " + activeGrade, text_color=activeGrade == "A+" ? color.lime : activeGrade == "A" ? color.orange : color.gray)
+
+    table.cell(dash, 0, 10, "Chart TF", text_color=color.silver)
+    table.cell(dash, 1, 10, is5m ? "OK" : "Not 5M", text_color=is5m ? color.lime : color.red)

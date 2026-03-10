@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(alembic upgrade:*)",
+      "Bash(python -m backend.scripts.seed_defaults:*)",
+      "Bash(Remove-Item \"c:\\\\Users\\\\bathini bona\\\\Documents\\\\Aegis Trader\\\\backend\\\\aegis_trader.db\" -ErrorAction SilentlyContinue)",
+      "Bash(del /f \"c:\\\\Users\\\\bathini bona\\\\Documents\\\\Aegis Trader\\\\backend\\\\aegis_trader.db\")",
+      "Bash(python:*)"
+    ]
+  }
+}
