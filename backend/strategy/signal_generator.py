@@ -29,9 +29,10 @@ def classify_signal_grade(score: float) -> SignalGrade:
     """
     Classify signal grade based on confluence score.
 
-    A+: score >= 85
-    A:  score >= 75
-    B:  score < 75
+    A+: score >= 80
+    A:  score >= 70
+    B:  score >= 60
+    C:  score < 60
 
     Args:
         score: Confluence score (0-100).
@@ -39,12 +40,14 @@ def classify_signal_grade(score: float) -> SignalGrade:
     Returns:
         SignalGrade classification.
     """
-    if score >= 85:
+    if score >= 80:
         return SignalGrade.A_PLUS
-    elif score >= 75:
+    elif score >= 70:
         return SignalGrade.A
-    else:
+    elif score >= 60:
         return SignalGrade.B
+    else:
+        return SignalGrade.C
 
 
 def determine_setup_type(

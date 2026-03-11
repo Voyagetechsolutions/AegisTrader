@@ -598,7 +598,7 @@ async def get_execution_decision(
         stop_loss=46100.0,
         take_profit=46200.0,
         confluence_score=confluence_score,
-        grade=SignalGrade.A_PLUS if confluence_score >= 85 else SignalGrade.A if confluence_score >= 75 else SignalGrade.B,
+        grade=SignalGrade.A_PLUS if confluence_score >= 80 else SignalGrade.A if confluence_score >= 70 else SignalGrade.B if confluence_score >= 60 else SignalGrade.C,
         analysis_breakdown={}
     )
     
@@ -644,7 +644,7 @@ async def get_bot_mode_compatibility():
                 "signal_processing": "A+ signals execute automatically, A/B signals alert only",
                 "auto_trade": "Executes A+ signals when auto_trade_enabled=True",
                 "conditions": [
-                    "Signal grade must be A+ (confluence score >= 85)",
+                    "Signal grade must be A+ (confluence score >= 80)",
                     "Auto trading must be enabled",
                     "Must be within active trading session",
                     "Risk limits must allow execution"

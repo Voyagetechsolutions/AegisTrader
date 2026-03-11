@@ -98,8 +98,14 @@ class AutoTradeDecisionEngine:
         self.core_performance: Optional[PerformanceMetrics] = None
         self.scalp_performance: Optional[PerformanceMetrics] = None
         
-        # Configuration
-        self.core_priority_threshold = 85  # A+ signals get priority
+        # Configuration - Grading thresholds
+        # A+ (80+): Auto trade, highest confidence, full allowed risk
+        # A (70-79): Auto trade, standard confidence, standard risk
+        # B (60-69): Alert only, no execution
+        # C (<60): Ignore
+        self.grade_a_plus_threshold = 80
+        self.grade_a_threshold = 70
+        self.grade_b_threshold = 60
         self.performance_lookback_trades = 20  # Recent trades for performance calc
         self.decision_cooldown_seconds = 30  # Prevent rapid switching
     
@@ -184,17 +190,17 @@ class AutoTradeDecisionEngine:
         - Normal to high volatility (not extreme)
         - Strong to weak trends (not ranging/choppy)
         """
-        # A+ signals always get approved (high confidence)
+        # A+ signals always get approved (80+ score, highest confidence)
         if signal.grade == SignalGrade.A_PLUS:
             return TradeDecision(
                 should_trade=True,
                 engine=EngineType.CORE_STRATEGY,
                 signal=signal,
-                reason="Core Strategy A+ signal - highest priority",
+                reason="Core Strategy A+ signal (80+) - highest confidence, full allowed risk",
                 blocked_engine=None
             )
         
-        # A signals need favorable regime
+        # A signals (70-79 score) need favorable regime
         if signal.grade == SignalGrade.A:
             # Check volatility
             if regime.volatility == VolatilityRegime.EXTREME:
@@ -202,7 +208,7 @@ class AutoTradeDecisionEngine:
                     should_trade=False,
                     engine=None,
                     signal=None,
-                    reason="Core Strategy A signal blocked - extreme volatility unfavorable",
+                    reason="Core Strategy A signal (70-79) blocked - extreme volatility unfavorable",
                     blocked_engine=EngineType.CORE_STRATEGY
                 )
             
@@ -212,7 +218,7 @@ class AutoTradeDecisionEngine:
                     should_trade=False,
                     engine=None,
                     signal=None,
-                    reason="Core Strategy A signal blocked - ranging/choppy market unfavorable",
+                    reason="Core Strategy A signal (70-79) blocked - ranging/choppy market unfavorable",
                     blocked_engine=EngineType.CORE_STRATEGY
                 )
             
@@ -220,16 +226,16 @@ class AutoTradeDecisionEngine:
                 should_trade=True,
                 engine=EngineType.CORE_STRATEGY,
                 signal=signal,
-                reason="Core Strategy A signal approved - favorable regime",
+                reason="Core Strategy A signal (70-79) approved - standard confidence, favorable regime",
                 blocked_engine=None
             )
         
-        # B signals should not reach here (suppressed by Core Engine)
+        # B signals (60-69 score) should not reach here (alert only, suppressed by Core Engine)
         return TradeDecision(
             should_trade=False,
             engine=None,
             signal=None,
-            reason="Core Strategy B signal - should be suppressed",
+            reason="Core Strategy B signal (60-69) - alert only, should be suppressed",
             blocked_engine=EngineType.CORE_STRATEGY
         )
     
@@ -291,13 +297,13 @@ class AutoTradeDecisionEngine:
         3. Use performance metrics as tiebreaker
         4. Default to Core Strategy (higher R:R potential)
         """
-        # Rule 1: Core Strategy A+ has absolute priority
+        # Rule 1: Core Strategy A+ (80+) has absolute priority
         if core_signal.grade == SignalGrade.A_PLUS:
             return TradeDecision(
                 should_trade=True,
                 engine=EngineType.CORE_STRATEGY,
                 signal=core_signal,
-                reason="Core Strategy A+ signal wins conflict - highest priority",
+                reason="Core Strategy A+ signal (80+) wins conflict - highest confidence, full allowed risk",
                 blocked_engine=EngineType.QUICK_SCALP
             )
         

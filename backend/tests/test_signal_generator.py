@@ -106,59 +106,76 @@ class TestPropertySignalGradeClassification:
     Property 15: Signal Grade Classification
 
     For any confluence score, the signal grade should be classified as:
-    - A+ for scores >= 85
-    - A for scores 75-84
-    - B for scores < 75
+    - A+ for scores >= 80
+    - A for scores 70-79
+    - B for scores 60-69
+    - C for scores < 60
 
     Validates: Requirements 9.3
     """
 
-    @given(st.floats(min_value=85, max_value=100, allow_nan=False))
+    @given(st.floats(min_value=80, max_value=100, allow_nan=False))
     @settings(max_examples=50)
     def test_a_plus_grade_for_high_scores(self, score: float):
         """Feature: python-strategy-engine, Property 15: Signal Grade Classification
 
-        Scores >= 85 should receive A+ grade.
+        Scores >= 80 should receive A+ grade.
         """
         grade = classify_signal_grade(score)
         assert grade == SignalGrade.A_PLUS
 
-    @given(st.floats(min_value=75, max_value=84.99, allow_nan=False))
+    @given(st.floats(min_value=70, max_value=79.99, allow_nan=False))
     @settings(max_examples=50)
     def test_a_grade_for_medium_scores(self, score: float):
         """Feature: python-strategy-engine, Property 15: Signal Grade Classification
 
-        Scores 75-84 should receive A grade.
+        Scores 70-79 should receive A grade.
         """
         grade = classify_signal_grade(score)
         assert grade == SignalGrade.A
 
-    @given(st.floats(min_value=0, max_value=74.99, allow_nan=False))
+    @given(st.floats(min_value=60, max_value=69.99, allow_nan=False))
     @settings(max_examples=50)
-    def test_b_grade_for_low_scores(self, score: float):
+    def test_b_grade_for_medium_low_scores(self, score: float):
         """Feature: python-strategy-engine, Property 15: Signal Grade Classification
 
-        Scores < 75 should receive B grade.
+        Scores 60-69 should receive B grade.
         """
         grade = classify_signal_grade(score)
         assert grade == SignalGrade.B
 
+    @given(st.floats(min_value=0, max_value=59.99, allow_nan=False))
+    @settings(max_examples=50)
+    def test_c_grade_for_low_scores(self, score: float):
+        """Feature: python-strategy-engine, Property 15: Signal Grade Classification
+
+        Scores < 60 should receive C grade.
+        """
+        grade = classify_signal_grade(score)
+        assert grade == SignalGrade.C
+
     def test_exact_boundaries(self):
         """Test exact grade boundary values."""
-        # Exactly 85 -> A+
-        assert classify_signal_grade(85.0) == SignalGrade.A_PLUS
+        # Exactly 80 -> A+
+        assert classify_signal_grade(80.0) == SignalGrade.A_PLUS
 
-        # Just below 85 -> A
-        assert classify_signal_grade(84.99) == SignalGrade.A
+        # Just below 80 -> A
+        assert classify_signal_grade(79.99) == SignalGrade.A
 
-        # Exactly 75 -> A
-        assert classify_signal_grade(75.0) == SignalGrade.A
+        # Exactly 70 -> A
+        assert classify_signal_grade(70.0) == SignalGrade.A
 
-        # Just below 75 -> B
-        assert classify_signal_grade(74.99) == SignalGrade.B
+        # Just below 70 -> B
+        assert classify_signal_grade(69.99) == SignalGrade.B
 
-        # Zero -> B
-        assert classify_signal_grade(0.0) == SignalGrade.B
+        # Exactly 60 -> B
+        assert classify_signal_grade(60.0) == SignalGrade.B
+
+        # Just below 60 -> C
+        assert classify_signal_grade(59.99) == SignalGrade.C
+
+        # Zero -> C
+        assert classify_signal_grade(0.0) == SignalGrade.C
 
         # Max (100) -> A+
         assert classify_signal_grade(100.0) == SignalGrade.A_PLUS

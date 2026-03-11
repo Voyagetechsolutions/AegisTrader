@@ -199,7 +199,7 @@ class TradingCoordinator:
                 scalp_signal=decision.signal,
                 signal_id=signal_id,
                 grade=SignalGrade.A,  # Scalp signals that pass are grade A
-                score=75.0,  # Scalp doesn't have scores, use default
+                score=70.0,  # Scalp doesn't have scores, use A threshold default
                 reasons=self._build_scalp_reasons()
             )
         

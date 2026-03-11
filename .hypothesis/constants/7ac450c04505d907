@@ -1,0 +1,4 @@
+# file: C:\Users\bathini bona\Documents\Aegis Trader\backend\strategy\config.py
+# hypothesis_version: 6.151.9
+
+[0.8, 125, 250, 500, 512, 2000, '10:00', '13:00', '15:30', '17:30', '20:00', '22:00', 'Africa/Johannesburg', 'STRATEGY_', 'US30', 'fvg:active', 'levels:current', 'liquidity:sweeps', 'signals:recent']

@@ -107,19 +107,23 @@ def core_signal_strategy(draw, grade=None):
     if grade:
         signal_grade = grade
         if grade == SignalGrade.A_PLUS:
-            confluence = draw(confluence_score_strategy(min_total=85, max_total=100))
+            confluence = draw(confluence_score_strategy(min_total=80, max_total=100))
         elif grade == SignalGrade.A:
-            confluence = draw(confluence_score_strategy(min_total=75, max_total=84))
-        else:  # B
-            confluence = draw(confluence_score_strategy(min_total=0, max_total=74))
+            confluence = draw(confluence_score_strategy(min_total=70, max_total=79))
+        elif grade == SignalGrade.B:
+            confluence = draw(confluence_score_strategy(min_total=60, max_total=69))
+        else:  # C
+            confluence = draw(confluence_score_strategy(min_total=0, max_total=59))
     else:
         confluence = draw(confluence_score_strategy())
-        if confluence.total >= 85:
+        if confluence.total >= 80:
             signal_grade = SignalGrade.A_PLUS
-        elif confluence.total >= 75:
+        elif confluence.total >= 70:
             signal_grade = SignalGrade.A
-        else:
+        elif confluence.total >= 60:
             signal_grade = SignalGrade.B
+        else:
+            signal_grade = SignalGrade.C
     
     return CoreSignal(
         instrument=instrument,

@@ -240,7 +240,8 @@ def main():
             
             for pos in positions:
                 profit = pos.profit
-                print(f"   Ticket #{pos.ticket}: {pos.type_str} {pos.volume} lots")
+                pos_type = "BUY" if pos.type == 0 else "SELL"
+                print(f"   Ticket #{pos.ticket}: {pos_type} {pos.volume} lots")
                 print(f"   Entry: {pos.price_open:.2f} | Current: {pos.price_current:.2f}")
                 print(f"   Profit: ${profit:.2f}")
             

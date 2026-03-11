@@ -39,6 +39,7 @@ class SignalGrade(str, PyEnum):
     A_PLUS = "A+"
     A = "A"
     B = "B"
+    C = "C"
 
 
 class SetupType(str, PyEnum):

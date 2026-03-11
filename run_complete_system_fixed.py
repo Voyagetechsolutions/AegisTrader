@@ -247,7 +247,8 @@ class LiveMT5Trader:
         if positions:
             logger.info(f"\n[POSITIONS] Open: {len(positions)}")
             for pos in positions:
-                logger.info(f"   #{pos.ticket}: {pos.type_str} {pos.volume} {pos.symbol}")
+                pos_type = "BUY" if pos.type == 0 else "SELL"
+                logger.info(f"   #{pos.ticket}: {pos_type} {pos.volume} {pos.symbol}")
                 logger.info(f"      Entry: {pos.price_open:.2f} | Current: {pos.price_current:.2f}")
                 logger.info(f"      Profit: ${pos.profit:.2f}")
     

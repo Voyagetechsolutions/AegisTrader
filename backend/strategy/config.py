@@ -61,6 +61,13 @@ class StrategyEngineSettings(BaseSettings):
     power_end: str = "22:00"
     timezone: str = "Africa/Johannesburg"
     
+    # Signal Grading Configuration
+    # Core Strategy confluence score thresholds
+    grade_a_plus_threshold: int = 80  # 80-100: Auto trade, highest confidence
+    grade_a_threshold: int = 70       # 70-79: Auto trade, standard confidence
+    grade_b_threshold: int = 60       # 60-69: Alert only
+    # Below 60: Ignore (Grade C)
+    
     class Config:
         env_prefix = "STRATEGY_"
         case_sensitive = False

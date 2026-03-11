@@ -52,6 +52,7 @@ class SignalGrade(Enum):
     A_PLUS = "A+"
     A = "A"
     B = "B"
+    C = "C"
 
 
 @dataclass

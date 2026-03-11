@@ -41,10 +41,22 @@ class SessionType(Enum):
 
 
 class SignalGrade(Enum):
-    """Signal quality grading for Core Strategy Engine."""
-    A_PLUS = "A+"
-    A = "A"
-    B = "B"
+    """
+    Signal quality grading for Core Strategy Engine.
+    
+    Grading scale based on confluence score (0-100):
+    - A+ (80-100): Auto trade, highest confidence, full allowed risk
+    - A (70-79): Auto trade, standard confidence, standard risk
+    - B (60-69): Alert only, no execution
+    - C (<60): Ignore, insufficient quality
+    
+    Note: Scale adjusted to match real-world signal distribution (60-65 typical).
+    Removed "aggressive" language to prevent risky behavior.
+    """
+    A_PLUS = "A+"  # 80-100: Auto trade, highest confidence
+    A = "A"        # 70-79: Auto trade, standard confidence
+    B = "B"        # 60-69: Alert only
+    C = "C"        # <60: Ignore
 
 
 @dataclass

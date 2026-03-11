@@ -425,7 +425,7 @@ async def get_dual_engine_config(db: AsyncSession = Depends(get_db)):
         "core_strategy": {
             "daily_trade_limit": 2,
             "risk_per_trade_pct": 1.0,
-            "min_confluence_score": 85,
+            "min_confluence_score": 80,  # A+ threshold
         },
         "quick_scalp": {
             "session_trade_limits": {
