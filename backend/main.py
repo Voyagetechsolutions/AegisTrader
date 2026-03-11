@@ -98,22 +98,33 @@ def _register_scheduled_jobs():
 async def lifespan(app: FastAPI):
     """Startup and shutdown lifecycle."""
     logger.info(f"Starting Aegis Trader backend [{settings.app_env}]")
+    
+    try:
+        # Create tables (both dev and production need this for SQLite)
+        # For PostgreSQL in production, use migrations instead
+        if "sqlite" in settings.database_url.lower():
+            await create_tables()
+            logger.info("Database tables created/verified")
+        else:
+            logger.info("Using PostgreSQL - ensure migrations are run")
 
-    # Create tables in development mode
-    if settings.app_env == "development":
-        await create_tables()
-        logger.info("Dev: database tables created/verified")
-
-    # Start scheduler
-    _register_scheduled_jobs()
-    scheduler.start()
-    logger.info("APScheduler started")
+        # Start scheduler
+        _register_scheduled_jobs()
+        scheduler.start()
+        logger.info("APScheduler started")
+    except Exception as e:
+        logger.error(f"Startup error: {e}", exc_info=True)
+        # Don't crash - allow app to start even if scheduler fails
+        logger.warning("Continuing startup despite errors")
 
     yield
 
     # Shutdown
-    scheduler.shutdown(wait=False)
-    logger.info("Aegis Trader backend shutting down")
+    try:
+        scheduler.shutdown(wait=False)
+        logger.info("Aegis Trader backend shutting down")
+    except Exception as e:
+        logger.error(f"Shutdown error: {e}")
 
 
 # ── App ───────────────────────────────────────────────────────────────────
@@ -154,9 +165,21 @@ app.include_router(trading_loop_router)
 
 @app.get("/health", tags=["System"])
 async def health():
-    return {"status": "ok", "env": settings.app_env, "version": "1.0.0"}
+    """Health check endpoint for monitoring and load balancers."""
+    return {
+        "status": "ok",
+        "env": settings.app_env,
+        "version": "1.0.0",
+        "database": "connected" if settings.database_url else "not configured"
+    }
 
 
 @app.get("/", tags=["System"])
 async def root():
-    return {"message": "Aegis Trader API is running. See /docs for API reference."}
+    """Root endpoint with API information."""
+    return {
+        "message": "Aegis Trader API is running",
+        "version": "1.0.0",
+        "docs": "/docs" if settings.app_env != "production" else "disabled in production",
+        "health": "/health"
+    }

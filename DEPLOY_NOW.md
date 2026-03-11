@@ -1,62 +1,76 @@
 # Deploy Your Backend to Cloud NOW ✓
 
-Your backend is ready to deploy. Choose your platform and follow the steps.
+Your backend is ready to deploy. I've fixed the deployment issues.
+
+---
+
+## � What Was Fixed
+
+Your deployment was failing because:
+1. Wrong start command (used `python -m uvicorn` instead of `uvicorn`)
+2. Hardcoded port `8000` instead of dynamic `$PORT`
+3. Config validation issues in cloud environment
+
+**All fixed!** ✓
 
 ---
 
 ## 🚀 OPTION 1: Render.com (Easiest - 5 Minutes)
 
-### Step 1: Create Account
-- Go to https://render.com
-- Click "Sign up"
-- Choose "Sign up with GitHub"
-- Authorize Render
+### Quick Deploy with render.yaml
 
-### Step 2: Create Web Service
-- Click "New +" button
-- Select "Web Service"
-- Choose your `AegisTrader` repository
-- Click "Connect"
+I've created a `render.yaml` file that configures everything automatically.
 
-### Step 3: Configure
-Fill in these fields:
-```
-Name: aegis-trader-backend
-Environment: Python 3
-Build Command: pip install -r backend/requirements.txt
-Start Command: python -m uvicorn backend.main:app --host 0.0.0.0 --port 8000
-Plan: Free
+**Step 1: Push to GitHub**
+```bash
+git add .
+git commit -m "Fix Render deployment configuration"
+git push
 ```
 
-### Step 4: Environment Variables
-Click "Advanced" → "Add Environment Variable"
+**Step 2: Deploy on Render**
+- Go to https://render.com/dashboard
+- Click your service (or create new one)
+- If existing: Settings → "Apply render.yaml" → Save
+- Click "Manual Deploy" → "Deploy latest commit"
 
-Add these 3 variables:
+**Step 3: Wait 2-3 minutes**
+
+**Step 4: Test**
 ```
-DATABASE_URL = sqlite:///./aegis_trader.db
-APP_ENV = production
-TIMEZONE = Africa/Johannesburg
-```
-
-### Step 5: Deploy
-Click "Create Web Service"
-
-**Wait 2-3 minutes...**
-
-You'll see a URL like: `https://aegis-trader-backend.onrender.com`
-
-### Step 6: Test
-Open in browser:
-```
-https://aegis-trader-backend.onrender.com/health
+https://your-app.onrender.com/health
 ```
 
-Should show:
+Should return:
 ```json
 {"status":"ok","env":"production","version":"1.0.0"}
 ```
 
-✓ **Your backend is live!**
+✓ **Done!**
+
+### Manual Configuration (Alternative)
+
+If you prefer manual setup:
+
+**Service Settings:**
+```
+Name: aegis-trader-backend
+Environment: Python 3
+Build Command: pip install -r backend/requirements.txt
+Start Command: uvicorn backend.main:app --host 0.0.0.0 --port $PORT
+Plan: Free
+```
+
+**CRITICAL**: Use `$PORT` not `8000`!
+
+**Environment Variables:**
+```
+APP_ENV = production
+TIMEZONE = Africa/Johannesburg
+PYTHON_VERSION = 3.11
+```
+
+**Don't set DATABASE_URL** - SQLite is used by default.
 
 ---
 

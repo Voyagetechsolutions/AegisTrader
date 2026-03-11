@@ -68,13 +68,17 @@ class Settings(BaseSettings):
     @field_validator('dashboard_jwt_secret', 'mt5_node_secret')
     @classmethod
     def validate_secrets(cls, v: str, info) -> str:
-        if v in ('changeme', 'changeme_jwt', 'changeme_mt5', 'test', 'secret'):
+        # Only validate if explicitly set to weak values
+        # Auto-generated secrets from default_factory are secure
+        if v and v in ('changeme', 'changeme_jwt', 'changeme_mt5', 'test', 'secret'):
             raise ValueError(f"{info.field_name} must not use default/weak values")
         return v
 
     class Config:
-        env_file = str(_ENV_FILE)
+        # Only use .env file if it exists (not available in cloud)
+        env_file = str(_ENV_FILE) if _ENV_FILE.exists() else None
         case_sensitive = False
+        extra = 'ignore'  # Ignore extra environment variables
 
 
 @lru_cache()
