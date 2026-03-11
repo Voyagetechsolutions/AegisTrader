@@ -2,6 +2,7 @@ from pydantic_settings import BaseSettings
 from pydantic import Field, field_validator
 from functools import lru_cache
 from pathlib import Path
+import secrets
 
 # Get absolute path to backend directory for database
 _BACKEND_DIR = Path(__file__).resolve().parent
@@ -14,7 +15,12 @@ class Settings(BaseSettings):
     # Application
     app_env: str = "development"
     port: int = 8000
-    dashboard_jwt_secret: str = Field(..., min_length=32, description="JWT signing secret")
+    # Generate secure random secret if not provided (for cloud deployment)
+    dashboard_jwt_secret: str = Field(
+        default_factory=lambda: secrets.token_urlsafe(32),
+        min_length=32,
+        description="JWT signing secret"
+    )
 
     # Database (using SQLite for local dev with absolute path)
     database_url: str = f"sqlite+aiosqlite:///{_DEFAULT_DB_PATH}"
@@ -25,7 +31,12 @@ class Settings(BaseSettings):
 
     # MT5 Execution Node
     mt5_node_url: str = "http://localhost:8001"
-    mt5_node_secret: str = Field(default="", min_length=16, description="MT5 node authentication secret")
+    # Generate secure random secret if not provided (for cloud deployment)
+    mt5_node_secret: str = Field(
+        default_factory=lambda: secrets.token_urlsafe(16),
+        min_length=16,
+        description="MT5 node authentication secret"
+    )
 
     # Risk Defaults
     max_daily_trades: int = 2
