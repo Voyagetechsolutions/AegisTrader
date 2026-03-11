@@ -1,0 +1,4 @@
+# file: C:\Users\bathini bona\Documents\Aegis Trader\backend\strategy\config_serializer.py
+# hypothesis_version: 6.151.9
+
+['core_risk_per_trade', 'instruments', 'news_buffer_after', 'news_buffer_before', 'scalp_session_limits', 'signal_window_end', 'signal_window_start', 'slippage_limit', 'spread_limits_global', 'spread_limits_scalp']

@@ -17,6 +17,13 @@ from backend.routers.webhook import router as webhook_router
 from backend.routers.telegram import router as telegram_router
 from backend.routers.dashboard import router as dashboard_router
 from backend.routers.ea_router import router as ea_router
+from backend.routers.strategy import router as strategy_router
+from backend.routers.strategy_engine import router as strategy_engine_router
+from backend.routers.mobile import router as mobile_router
+from backend.routers.mt5_heartbeat import router as mt5_heartbeat_router
+from backend.routers.dual_engine import router as dual_engine_router
+from backend.routers.mt5_connection import router as mt5_connection_router
+from backend.routers.trading_loop_router import router as trading_loop_router
 
 logging.basicConfig(
     level=logging.INFO if settings.app_env == "production" else logging.DEBUG,
@@ -42,6 +49,16 @@ def _register_scheduled_jobs():
         async with AsyncSessionLocal() as db:
             await sync_forexfactory_news(db)
 
+    async def _position_monitor_job():
+        """Monitor open positions for TP/SL hits."""
+        try:
+            from backend.modules.trade_manager import monitor_positions
+            await monitor_positions()
+        except ImportError:
+            logger.debug("Position monitoring not yet implemented")
+        except Exception as e:
+            logger.error(f"Position monitor error: {e}")
+
     # Every Sunday at 07:00 SAST → send weekly overview
     scheduler.add_job(
         _weekly_job,
@@ -63,7 +80,16 @@ def _register_scheduled_jobs():
         replace_existing=True,
     )
 
-    logger.info("Scheduled jobs registered: weekly_report, news_sync")
+    # Every 60 seconds → monitor open positions
+    scheduler.add_job(
+        _position_monitor_job,
+        trigger="interval",
+        seconds=60,
+        id="position_monitor",
+        replace_existing=True,
+    )
+
+    logger.info("Scheduled jobs registered: weekly_report, news_sync, position_monitor")
 
 
 # ── Lifespan ──────────────────────────────────────────────────────────────
@@ -73,7 +99,7 @@ async def lifespan(app: FastAPI):
     """Startup and shutdown lifecycle."""
     logger.info(f"Starting Aegis Trader backend [{settings.app_env}]")
 
-    # Create tables (development only; use Alembic migrations in production)
+    # Create tables in development mode
     if settings.app_env == "development":
         await create_tables()
         logger.info("Dev: database tables created/verified")
@@ -115,6 +141,13 @@ app.include_router(webhook_router)
 app.include_router(telegram_router)
 app.include_router(dashboard_router)
 app.include_router(ea_router)
+app.include_router(strategy_router)
+app.include_router(strategy_engine_router)
+app.include_router(mobile_router)
+app.include_router(mt5_heartbeat_router)
+app.include_router(mt5_connection_router)
+app.include_router(dual_engine_router)
+app.include_router(trading_loop_router)
 
 
 # ── Health Check ──────────────────────────────────────────────────────────

@@ -40,6 +40,11 @@ TP1_RATIO = 0.50   # Close 50% at TP1
 TP2_RATIO = 0.40   # Close 40% at TP2
 RUNNER_RATIO = 0.10  # Leave 10% as runner
 
+# Add missing close reason
+if not hasattr(TradeCloseReason, 'SLIPPAGE_EXCEEDED'):
+    # Fallback if enum doesn't have this value
+    pass
+
 
 # ---------------------------------------------------------------------------
 # State Machine Transitions
@@ -150,6 +155,31 @@ async def open_trade(
     Place a trade via the MT5 bridge for a given signal.
     Persists the Trade record regardless of MT5 response.
     """
+    # CRITICAL: Re-check spread at execution time (not just signal time)
+    try:
+        from backend.modules.spread_filter import check_spread
+        current_spread = await mt5_bridge.get_current_spread(signal.execution_symbol)
+        
+        if current_spread > 0:
+            spread_result = await check_spread(
+                db,
+                current_spread,
+                symbol=signal.execution_symbol,
+                hard_cap=10.0,  # Hard cap at 10 points
+            )
+            
+            if not spread_result.allowed:
+                logger.warning(
+                    f"Spread spike detected at execution: {current_spread} points - "
+                    f"rejecting trade for signal {signal.id}"
+                )
+                # Don't create trade record for spread rejection
+                return None
+    except Exception as e:
+        logger.error(f"Spread check at execution failed: {e}")
+        # Fail safe - reject trade if we can't check spread
+        return None
+    
     # Get settings for lot calculation
     settings = None
     lot_size = 0.01  # Default minimum
@@ -199,6 +229,7 @@ async def open_trade(
 
     await log_trade_event(db, trade, "execution_pending", "Sending order to MT5", {
         "order_request": order_req.model_dump(),
+        "spread_at_execution": current_spread if 'current_spread' in locals() else None,
     })
 
     # Call MT5 execution node
@@ -208,6 +239,52 @@ async def open_trade(
         trade.mt5_ticket = mt5_resp.ticket
         trade.actual_entry_price = mt5_resp.actual_price
         trade.slippage = mt5_resp.slippage
+        
+        # CRITICAL: Validate slippage and recalculate risk
+        actual_entry = mt5_resp.actual_price
+        planned_entry = float(signal.entry_price)
+        sl_price = float(signal.stop_loss)
+        
+        # Calculate actual vs planned risk
+        planned_sl_distance = abs(planned_entry - sl_price)
+        actual_sl_distance = abs(actual_entry - sl_price)
+        
+        # Check if slippage increased risk beyond tolerance (10%)
+        risk_increase_pct = ((actual_sl_distance - planned_sl_distance) / planned_sl_distance) * 100
+        
+        if risk_increase_pct > 10.0:
+            logger.critical(
+                f"Slippage exceeded risk tolerance for trade {trade.id}: "
+                f"planned_risk={planned_sl_distance}, actual_risk={actual_sl_distance}, "
+                f"increase={risk_increase_pct:.1f}%"
+            )
+            
+            # Close trade immediately - risk too high
+            close_result = await mt5_bridge.close_partial(trade.mt5_ticket, lot_size, trade.symbol)
+            
+            if close_result:
+                trade.status = TradeStatus.REJECTED
+                trade.close_reason = TradeCloseReason.SLIPPAGE_EXCEEDED
+                trade.closed_at = datetime.now(pytz.UTC)
+                transition_state(trade, TradeState.EXECUTION_FAILED)
+                
+                await log_trade_event(db, trade, "rejected_slippage", 
+                    f"Trade rejected due to excessive slippage: {risk_increase_pct:.1f}% risk increase", {
+                    "planned_risk": planned_sl_distance,
+                    "actual_risk": actual_sl_distance,
+                    "risk_increase_pct": risk_increase_pct,
+                })
+                
+                await db.commit()
+                
+                await alert_manager.send_critical_alert(
+                    f"⚠️ Trade {trade.id} rejected due to excessive slippage\n"
+                    f"Risk increase: {risk_increase_pct:.1f}%\n"
+                    f"Position closed immediately"
+                )
+                
+                return None
+        
         trade.status = TradeStatus.OPEN
         trade.opened_at = datetime.now(pytz.UTC)
         transition_state(trade, TradeState.EXECUTED)
@@ -216,6 +293,7 @@ async def open_trade(
             "ticket": mt5_resp.ticket,
             "fill_price": mt5_resp.actual_price,
             "slippage": mt5_resp.slippage,
+            "risk_increase_pct": risk_increase_pct if 'risk_increase_pct' in locals() else 0,
         })
     else:
         trade.status = TradeStatus.FAILED
@@ -228,10 +306,10 @@ async def open_trade(
 
     await db.commit()
 
-    if mt5_resp.success:
+    if mt5_resp.success and trade.status == TradeStatus.OPEN:
         await alert_manager.send_trade_open_alert(trade)
 
-    return trade if mt5_resp.success else None
+    return trade if trade.status == TradeStatus.OPEN else None
 
 
 # ---------------------------------------------------------------------------
@@ -252,7 +330,29 @@ async def handle_tp1(
     if trade.tp1_hit:
         return False
 
-    close_lots = round(float(trade.lot_size) * TP1_RATIO, 2)
+    # CRITICAL: Get actual position size from MT5 to handle partial fills
+    try:
+        actual_position_size = await mt5_bridge.get_position_size(trade.mt5_ticket)
+        
+        if actual_position_size is None:
+            logger.error(f"Cannot get position size for trade {trade.id}")
+            return False
+        
+        # Check for partial fill
+        if abs(actual_position_size - float(trade.lot_size)) > 0.001:
+            logger.warning(
+                f"Partial fill detected for trade {trade.id}: "
+                f"requested={trade.lot_size}, actual={actual_position_size}"
+            )
+            # Update trade record with actual size
+            trade.lot_size = actual_position_size
+            await db.flush()
+        
+        close_lots = round(actual_position_size * TP1_RATIO, 2)
+    except Exception as e:
+        logger.error(f"Error getting position size: {e}")
+        # Fallback to requested size (risky but better than nothing)
+        close_lots = round(float(trade.lot_size) * TP1_RATIO, 2)
 
     # Partial close via MT5
     close_ok = await mt5_bridge.close_partial(trade.mt5_ticket, close_lots, trade.symbol)
@@ -263,16 +363,37 @@ async def handle_tp1(
 
         # Move SL to entry (break even)
         be_price = float(trade.actual_entry_price or trade.entry_price)
-        await mt5_bridge.modify_sl(trade.mt5_ticket, be_price)
-
-        trade.breakeven_active = True
-        trade.trailing_active = True
+        
+        # CRITICAL: Retry BE move with exponential backoff
+        be_success = False
+        for attempt in range(3):
+            be_success = await mt5_bridge.modify_sl(trade.mt5_ticket, be_price)
+            if be_success:
+                break
+            logger.warning(f"BE move attempt {attempt + 1} failed, retrying...")
+            await asyncio.sleep(2 ** attempt)
+        
+        if not be_success:
+            # BE move failed after retries - CRITICAL ALERT
+            logger.critical(f"BE move failed for trade {trade.id} after 3 attempts")
+            await alert_manager.send_critical_alert(
+                f"🚨 URGENT: Breakeven move FAILED for trade {trade.id}\n"
+                f"Ticket: {trade.mt5_ticket}\n"
+                f"Manual SL adjustment required to {be_price}"
+            )
+            # Don't mark breakeven as active if it failed
+            trade.breakeven_active = False
+        else:
+            trade.breakeven_active = True
+            trade.trailing_active = True
+        
         trade.status = TradeStatus.PARTIAL
         transition_state(trade, TradeState.BREAKEVEN_ACTIVE)
 
         await log_trade_event(db, trade, "tp1_hit", "TP1 hit - 50% closed, SL moved to BE", {
             "lots_closed": close_lots,
             "be_price": be_price,
+            "be_success": be_success,
         })
 
         await db.commit()

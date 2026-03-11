@@ -6,250 +6,372 @@
 #property copyright "Aegis Trader"
 #property link      "https://www.aegistrader.io"
 #property version   "1.00"
-#property description "Native MQL5 execution bridge for Aegis Trader."
-#property description "Polls the backend API for trade instructions."
+#property description "MT5 Bridge for Aegis Trader - Connects to Python backend"
 
 #include <Trade\Trade.mqh>
-#include <JAson.mqh> // Requires JAson library for JSON parsing
 
-//--- input parameters
-input string   BackendURL     = "http://127.0.0.1:8002/mt5/poll"; // URL of the backend API polling endpoint
-input string   ApiSecret      = "changeme_mt5";                   // Secret key for API authentication
-input int      PollIntervalMs = 1000;                             // Polling interval in milliseconds
-input int      SlippagePips   = 10;                               // Maximum slippage in points
-input ulong    MagicNumber    = 202600;                           // Magic number for orders
+//--- Input parameters
+input string   API_URL        = "http://127.0.0.1:8000";  // Backend API URL
+input string   API_SECRET     = "Y_qQkaWbdXEdeJs-XXitLw"; // API Secret (match .env)
+input int      HeartbeatSec   = 5;                        // Heartbeat interval in seconds
+input ulong    MagicNumber    = 202600;                   // Magic number for orders
+input int      Slippage       = 10;                       // Maximum slippage in points
 
-//--- global variables
+//--- Global variables
 CTrade         trade;
-int            timer_id;
+datetime       last_heartbeat = 0;
+datetime       last_price_update = 0;
+bool           is_connected = false;
 
 //+------------------------------------------------------------------+
 //| Expert initialization function                                   |
 //+------------------------------------------------------------------+
 int OnInit()
-  {
-   // Initialize trade tracking
+{
+   // Initialize trade object
    trade.SetExpertMagicNumber(MagicNumber);
    trade.SetMarginMode();
    trade.SetTypeFillingBySymbol(Symbol());
-   trade.SetDeviationInPoints(SlippagePips);
-
-   // Set up the polling timer
-   EventSetMillisecondTimer(PollIntervalMs);
-
-   Print("Aegis Trade Bridge Initialized. Polling ", BackendURL, " every ", PollIntervalMs, "ms.");
+   trade.SetDeviationInPoints(Slippage);
+   
+   // Set up timer for heartbeat
+   EventSetTimer(HeartbeatSec);
+   
+   Print("=== Aegis Trade Bridge Initialized ===");
+   Print("Backend URL: ", API_URL);
+   Print("Symbol: ", Symbol());
+   Print("Magic Number: ", MagicNumber);
+   Print("Heartbeat: Every ", HeartbeatSec, " seconds");
+   
+   // Send initial heartbeat
+   SendHeartbeat();
+   
    return(INIT_SUCCEEDED);
-  }
+}
 
 //+------------------------------------------------------------------+
 //| Expert deinitialization function                                 |
 //+------------------------------------------------------------------+
 void OnDeinit(const int reason)
-  {
+{
    EventKillTimer();
-   Print("Aegis Trade Bridge Deinitialized.");
-  }
+   Print("=== Aegis Trade Bridge Stopped ===");
+   Print("Reason: ", reason);
+}
 
 //+------------------------------------------------------------------+
-//| Timer function (Polling)                                         |
+//| Timer function - Sends heartbeat                                 |
 //+------------------------------------------------------------------+
 void OnTimer()
-  {
-   PollBackend();
-  }
+{
+   SendHeartbeat();
+}
 
 //+------------------------------------------------------------------+
-//| Poll Backend API                                                 |
+//| Send Heartbeat to Backend                                        |
 //+------------------------------------------------------------------+
-void PollBackend()
-  {
-   string headers = "X-MT5-Secret: " + ApiSecret + "\r\nContent-Type: application/json\r\n";
-   char post[], result[];
+void SendHeartbeat()
+{
+   string url = API_URL + "/mt5/heartbeat";
+   string headers = "Content-Type: application/json\r\n";
+   headers += "X-MT5-Secret: " + API_SECRET + "\r\n";
+   
+   // Get account info
+   double balance = AccountInfoDouble(ACCOUNT_BALANCE);
+   double equity = AccountInfoDouble(ACCOUNT_EQUITY);
+   double margin = AccountInfoDouble(ACCOUNT_MARGIN);
+   double free_margin = AccountInfoDouble(ACCOUNT_MARGIN_FREE);
+   
+   // Get current price
+   double bid = SymbolInfoDouble(Symbol(), SYMBOL_BID);
+   double ask = SymbolInfoDouble(Symbol(), SYMBOL_ASK);
+   
+   // Count open positions
+   int positions = 0;
+   for(int i = PositionsTotal() - 1; i >= 0; i--)
+   {
+      if(PositionGetTicket(i) > 0)
+      {
+         if(PositionGetInteger(POSITION_MAGIC) == MagicNumber)
+            positions++;
+      }
+   }
+   
+   // Build JSON payload (simple string concatenation)
+   string payload = "{";
+   payload += "\"symbol\":\"" + Symbol() + "\",";
+   payload += "\"balance\":" + DoubleToString(balance, 2) + ",";
+   payload += "\"equity\":" + DoubleToString(equity, 2) + ",";
+   payload += "\"margin\":" + DoubleToString(margin, 2) + ",";
+   payload += "\"free_margin\":" + DoubleToString(free_margin, 2) + ",";
+   payload += "\"positions\":" + IntegerToString(positions) + ",";
+   payload += "\"bid\":" + DoubleToString(bid, 2) + ",";
+   payload += "\"ask\":" + DoubleToString(ask, 2) + ",";
+   payload += "\"server_time\":\"" + TimeToString(TimeCurrent(), TIME_DATE|TIME_SECONDS) + "\"";
+   payload += "}";
+   
+   // Convert to char array
+   char post_data[];
+   char result[];
    string result_headers;
-
-   int res = WebRequest("GET", BackendURL, headers, 5000, post, result, result_headers);
+   StringToCharArray(payload, post_data, 0, WHOLE_ARRAY, CP_UTF8);
+   ArrayResize(post_data, ArraySize(post_data) - 1); // Remove null terminator
+   
+   // Send request
+   int res = WebRequest("POST", url, headers, 5000, post_data, result, result_headers);
    
    if(res == 200)
-     {
-      string json_response = CharArrayToString(result);
-      if (json_response != "{}" && json_response != "[]" && json_response != "") {
-          ProcessCommands(json_response);
+   {
+      if(!is_connected)
+      {
+         Print("✓ Connected to backend");
+         is_connected = true;
       }
-     }
-   else if(res != 200 && res != 404 && res != -1) // Ignore standard 404/timeouts if queue is empty
-     {
-      Print("HTTP Error polling backend: ", res, " Headers: ", result_headers);
-     }
-  }
-
-//+------------------------------------------------------------------+
-//| Process Commands from JSON                                       |
-//+------------------------------------------------------------------+
-void ProcessCommands(string json_string)
-  {
-   CJAVal json;
-   if(json.Deserialize(json_string))
-     {
-      // Iterate through an array of commands
-      if (json.GetType() == jtARRAY) {
-          for(int i = 0; i < ArraySize(json.m_e); i++)
-            {
-             string action = json[i]["action"].ToStr();
-             
-             if(action == "place_order")
-                 ExecutePlaceOrder(json[i]);
-             else if(action == "close_partial")
-                 ExecuteClosePartial(json[i]);
-             else if(action == "modify_sl")
-                 ExecuteModifySL(json[i]);
-             else if (action == "get_positions")
-                 ReportPositions();
-            }
-      } else if (json.GetType() == jtOBJECT) {
-          // Single command
-          string action = json["action"].ToStr();
-          if(action == "place_order") ExecutePlaceOrder(json);
-          else if(action == "close_partial") ExecuteClosePartial(json);
-          else if(action == "modify_sl") ExecuteModifySL(json);
-          else if (action == "get_positions") ReportPositions();
+      last_heartbeat = TimeCurrent();
+   }
+   else if(res == -1)
+   {
+      // WebRequest not allowed - only show once
+      if(is_connected)
+      {
+         Print("✗ Backend connection lost - WebRequest not allowed");
+         Print("Add ", API_URL, " to allowed URLs:");
+         Print("Tools → Options → Expert Advisors → Allow WebRequest for listed URL");
+         is_connected = false;
       }
-     }
+   }
    else
-     {
-      Print("Failed to parse JSON response: ", json_string);
-     }
-  }
+   {
+      // Don't disconnect on single error - could be temporary
+      // Only disconnect if we haven't had a successful heartbeat in 90 seconds
+      if(is_connected && (TimeCurrent() - last_heartbeat) > 90)
+      {
+         Print("✗ Backend connection lost - no successful heartbeat for 90 seconds");
+         is_connected = false;
+      }
+   }
+}
 
 //+------------------------------------------------------------------+
-//| Execute: Place Order                                             |
+//| Get Positions - Returns JSON string of open positions            |
 //+------------------------------------------------------------------+
-void ExecutePlaceOrder(CJAVal &cmd)
-  {
-   string sym = cmd["symbol"].ToStr();
-   string dir = cmd["direction"].ToStr();
-   double lots = cmd["lot_size"].ToDbl();
-   double sl = cmd["sl_price"].ToDbl();
-   double tp = cmd["tp_price"].ToDbl(); // TP1
-   string comment = cmd["comment"].ToStr();
+string GetPositionsJSON()
+{
+   string json = "[";
+   bool first = true;
+   
+   for(int i = PositionsTotal() - 1; i >= 0; i--)
+   {
+      ulong ticket = PositionGetTicket(i);
+      if(ticket > 0 && PositionGetInteger(POSITION_MAGIC) == MagicNumber)
+      {
+         if(!first) json += ",";
+         first = false;
+         
+         json += "{";
+         json += "\"ticket\":" + IntegerToString(ticket) + ",";
+         json += "\"symbol\":\"" + PositionGetString(POSITION_SYMBOL) + "\",";
+         json += "\"type\":\"" + (PositionGetInteger(POSITION_TYPE) == POSITION_TYPE_BUY ? "buy" : "sell") + "\",";
+         json += "\"volume\":" + DoubleToString(PositionGetDouble(POSITION_VOLUME), 2) + ",";
+         json += "\"price_open\":" + DoubleToString(PositionGetDouble(POSITION_PRICE_OPEN), 5) + ",";
+         json += "\"price_current\":" + DoubleToString(PositionGetDouble(POSITION_PRICE_CURRENT), 5) + ",";
+         json += "\"sl\":" + DoubleToString(PositionGetDouble(POSITION_SL), 5) + ",";
+         json += "\"tp\":" + DoubleToString(PositionGetDouble(POSITION_TP), 5) + ",";
+         json += "\"profit\":" + DoubleToString(PositionGetDouble(POSITION_PROFIT), 2) + ",";
+         json += "\"swap\":" + DoubleToString(PositionGetDouble(POSITION_SWAP), 2);
+         json += "}";
+      }
+   }
+   
+   json += "]";
+   return json;
+}
 
-   if (comment == "") comment = "AegisTrader";
-
+//+------------------------------------------------------------------+
+//| Place Order - Called by backend via webhook                      |
+//+------------------------------------------------------------------+
+bool PlaceOrder(string symbol, string direction, double lots, double sl, double tp, string comment)
+{
    bool success = false;
-   if(dir == "buy")
-     {
-      success = trade.Buy(lots, sym, 0, sl, tp, comment);
-     }
-   else if(dir == "sell")
-     {
-      success = trade.Sell(lots, sym, 0, sl, tp, comment);
-     }
-
+   
+   if(direction == "buy" || direction == "long")
+   {
+      success = trade.Buy(lots, symbol, 0, sl, tp, comment);
+   }
+   else if(direction == "sell" || direction == "short")
+   {
+      success = trade.Sell(lots, symbol, 0, sl, tp, comment);
+   }
+   
    if(success)
-     {
+   {
       ulong ticket = trade.ResultOrder();
-      Print("Order Placed Successfully: #", ticket, " ", dir, " ", lots, " ", sym);
-      ReportExecutionResult(cmd["id"].ToStr(), "success", IntegerToString(ticket));
-     }
+      Print("✓ Order placed: #", ticket, " ", direction, " ", lots, " ", symbol, " @ ", SymbolInfoDouble(symbol, SYMBOL_BID));
+      return true;
+   }
    else
-     {
-      Print("Order Placement Failed: ", trade.ResultRetcode(), " - ", trade.ResultComment());
-      ReportExecutionResult(cmd["id"].ToStr(), "error", trade.ResultComment());
-     }
-  }
+   {
+      Print("✗ Order failed: ", trade.ResultRetcode(), " - ", trade.ResultComment());
+      return false;
+   }
+}
 
 //+------------------------------------------------------------------+
-//| Execute: Close Partial                                           |
+//| Modify Stop Loss                                                 |
 //+------------------------------------------------------------------+
-void ExecuteClosePartial(CJAVal &cmd)
-  {
-   ulong ticket = (ulong)cmd["ticket"].ToInt();
-   double lots = cmd["lot_size"].ToDbl();
-
-   if(PositionSelectByTicket(ticket))
-     {
-      bool success = trade.PositionClosePartial(ticket, lots);
-      if(success)
-        {
-         Print("Position #", ticket, " Partially Closed: ", lots, " lots");
-         ReportExecutionResult(cmd["id"].ToStr(), "success", "");
-        }
-      else
-        {
-         Print("Partial Close Failed on #", ticket, ": ", trade.ResultRetcode());
-         ReportExecutionResult(cmd["id"].ToStr(), "error", trade.ResultComment());
-        }
-     }
+bool ModifySL(ulong ticket, double new_sl)
+{
+   if(!PositionSelectByTicket(ticket))
+   {
+      Print("✗ Position #", ticket, " not found");
+      return false;
+   }
+   
+   double current_tp = PositionGetDouble(POSITION_TP);
+   bool success = trade.PositionModify(ticket, new_sl, current_tp);
+   
+   if(success)
+   {
+      Print("✓ SL modified: #", ticket, " → ", new_sl);
+      return true;
+   }
    else
-     {
-      Print("Position #", ticket, " not found for partial close.");
-      ReportExecutionResult(cmd["id"].ToStr(), "error", "Position not found");
-     }
-  }
+   {
+      Print("✗ SL modify failed: #", ticket, " - ", trade.ResultRetcode());
+      return false;
+   }
+}
 
 //+------------------------------------------------------------------+
-//| Execute: Modify SL                                               |
+//| Close Partial Position                                           |
 //+------------------------------------------------------------------+
-void ExecuteModifySL(CJAVal &cmd)
-  {
-   ulong ticket = (ulong)cmd["ticket"].ToInt();
-   double new_sl = cmd["sl_price"].ToDbl();
-
-   if(PositionSelectByTicket(ticket))
-     {
-      double current_tp = PositionGetDouble(POSITION_TP);
-      bool success = trade.PositionModify(ticket, new_sl, current_tp);
-      
-      if(success)
-        {
-         Print("Position #", ticket, " SL Modified to ", new_sl);
-         ReportExecutionResult(cmd["id"].ToStr(), "success", "");
-        }
-      else
-        {
-         Print("Modify SL Failed on #", ticket, ": ", trade.ResultRetcode());
-         ReportExecutionResult(cmd["id"].ToStr(), "error", trade.ResultComment());
-        }
-     }
+bool ClosePartial(ulong ticket, double lots)
+{
+   if(!PositionSelectByTicket(ticket))
+   {
+      Print("✗ Position #", ticket, " not found");
+      return false;
+   }
+   
+   bool success = trade.PositionClosePartial(ticket, lots);
+   
+   if(success)
+   {
+      Print("✓ Partial close: #", ticket, " - ", lots, " lots");
+      return true;
+   }
    else
-     {
-      Print("Position #", ticket, " not found for modify SL.");
-      ReportExecutionResult(cmd["id"].ToStr(), "error", "Position not found");
-     }
-  }
+   {
+      Print("✗ Partial close failed: #", ticket, " - ", trade.ResultRetcode());
+      return false;
+   }
+}
 
 //+------------------------------------------------------------------+
-//| Report Positions (Push current state to backend)                 |
+//| Close Position                                                   |
 //+------------------------------------------------------------------+
-void ReportPositions()
-  {
-    // Build JSON payload of all open positions matching MagicNumber
-    CJAVal payload;
-    payload["action"] = "sync_positions";
-    // ... logic to build JSON array of positions and POST to backend ...
-    // To keep this MVP simple, we rely on the backend tracking orders it placed, 
-    // but full state sync goes here.
-  }
+bool ClosePosition(ulong ticket)
+{
+   if(!PositionSelectByTicket(ticket))
+   {
+      Print("✗ Position #", ticket, " not found");
+      return false;
+   }
+   
+   bool success = trade.PositionClose(ticket);
+   
+   if(success)
+   {
+      Print("✓ Position closed: #", ticket);
+      return true;
+   }
+   else
+   {
+      Print("✗ Close failed: #", ticket, " - ", trade.ResultRetcode());
+      return false;
+   }
+}
 
 //+------------------------------------------------------------------+
-//| Report Execution Result                                          |
+//| Close All Positions                                              |
 //+------------------------------------------------------------------+
-void ReportExecutionResult(string command_id, string status, string message)
-  {
-   if (command_id == "") return;
+int CloseAllPositions()
+{
+   int closed = 0;
    
-   CJAVal payload;
-   payload["command_id"] = command_id;
-   payload["status"] = status;
-   payload["message"] = message;
+   for(int i = PositionsTotal() - 1; i >= 0; i--)
+   {
+      ulong ticket = PositionGetTicket(i);
+      if(ticket > 0 && PositionGetInteger(POSITION_MAGIC) == MagicNumber)
+      {
+         if(trade.PositionClose(ticket))
+            closed++;
+      }
+   }
    
-   string payload_str = payload.Serialize();
-   string headers = "X-MT5-Secret: " + ApiSecret + "\r\nContent-Type: application/json\r\n";
-   char post[], result[];
-   string result_headers;
+   Print("✓ Closed ", closed, " positions");
+   return closed;
+}
+
+//+------------------------------------------------------------------+
+//| Get Account Balance                                              |
+//+------------------------------------------------------------------+
+double GetBalance()
+{
+   return AccountInfoDouble(ACCOUNT_BALANCE);
+}
+
+//+------------------------------------------------------------------+
+//| Get Account Equity                                               |
+//+------------------------------------------------------------------+
+double GetEquity()
+{
+   return AccountInfoDouble(ACCOUNT_EQUITY);
+}
+
+//+------------------------------------------------------------------+
+//| Chart Event Handler                                              |
+//+------------------------------------------------------------------+
+void OnChartEvent(const int id,
+                  const long &lparam,
+                  const double &dparam,
+                  const string &sparam)
+{
+   // Handle custom events from backend if needed
+}
+
+//+------------------------------------------------------------------+
+//| Expert tick function                                             |
+//+------------------------------------------------------------------+
+void OnTick()
+{
+   // Send price update every 2 seconds (more frequent than heartbeat)
+   if(TimeCurrent() - last_price_update >= 2)
+   {
+      SendHeartbeat();
+      last_price_update = TimeCurrent();
+   }
    
-   StringToCharArray(payload_str, post, 0, WHOLE_ARRAY, CP_UTF8);
+   // Update chart comment with status
+   string info = "=== Aegis Trader Bridge ===\n";
+   info += "Status: " + (is_connected ? "✓ Connected" : "✗ Disconnected") + "\n";
+   info += "Balance: $" + DoubleToString(AccountInfoDouble(ACCOUNT_BALANCE), 2) + "\n";
+   info += "Equity: $" + DoubleToString(AccountInfoDouble(ACCOUNT_EQUITY), 2) + "\n";
    
-   // POST result back to backend
-   // WebRequest("POST", BackendURL + "_result", headers, 5000, post, result, result_headers);
-  }
+   int positions = 0;
+   for(int i = PositionsTotal() - 1; i >= 0; i--)
+   {
+      if(PositionGetTicket(i) > 0)
+      {
+         if(PositionGetInteger(POSITION_MAGIC) == MagicNumber)
+            positions++;
+      }
+   }
+   info += "Positions: " + IntegerToString(positions) + "\n";
+   info += "Last Update: " + TimeToString(last_heartbeat, TIME_SECONDS) + "\n";
+   info += "Bid: " + DoubleToString(SymbolInfoDouble(Symbol(), SYMBOL_BID), 2) + "\n";
+   info += "Ask: " + DoubleToString(SymbolInfoDouble(Symbol(), SYMBOL_ASK), 2) + "\n";
+   
+   Comment(info);
+}
 //+------------------------------------------------------------------+

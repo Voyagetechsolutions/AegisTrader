@@ -1,0 +1,4 @@
+# file: C:\Users\bathini bona\Documents\Aegis Trader\backend\routers\__init__.py
+# hypothesis_version: 6.151.9
+
+['dashboard_router', 'strategy_router', 'telegram_router', 'webhook_router']

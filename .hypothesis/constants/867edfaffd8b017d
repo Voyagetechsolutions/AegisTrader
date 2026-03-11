@@ -1,0 +1,4 @@
+# file: C:\Users\bathini bona\Documents\Aegis Trader\backend\strategy\market_data.py
+# hypothesis_version: 6.151.9
+
+[0.5, 2000, 'MT5 not initialized', 'close', 'fetch_candle', 'high', 'low', 'market_data', 'open', 'tick_volume', 'time']

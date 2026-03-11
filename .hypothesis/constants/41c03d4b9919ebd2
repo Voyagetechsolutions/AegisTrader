@@ -1,0 +1,4 @@
+# file: C:\Users\bathini bona\Documents\Aegis Trader\backend\strategy\risk_integration.py
+# hypothesis_version: 6.151.9
+
+[1.6, 100.0, 1000.0, 999, 'Risk cache cleared', 'cache_keys', 'cache_ttl_seconds', 'cached_entries', 'risk_integration']

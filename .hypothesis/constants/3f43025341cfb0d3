@@ -1,0 +1,4 @@
+# file: C:\Users\bathini bona\Documents\Aegis Trader\backend\routers\strategy.py
+# hypothesis_version: 6.151.9
+
+[400, '/config', '/health', '/session', '/signals', '/status', '/strategy', 'Strategy Engine', 'components', 'healthy', 'min_grade', 'ok', 'risk_integration', 'running', 'session_active', 'session_manager', 'session_override', 'signal_generator', 'status', 'updated']

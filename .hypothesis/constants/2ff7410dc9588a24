@@ -1,0 +1,4 @@
+# file: C:\Users\bathini bona\AppData\Roaming\Python\Python314\site-packages\telegram\_inline\inlinequeryresultaudio.py
+# hypothesis_version: 6.151.9
+
+['_audio_duration', 'audio_duration', 'audio_url', 'caption', 'caption_entities', 'parse_mode', 'performer', 'reply_markup', 'title']

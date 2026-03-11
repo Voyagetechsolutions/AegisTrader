@@ -1,0 +1,4 @@
+# file: C:\Users\bathini bona\AppData\Roaming\Python\Python314\site-packages\telegram\_chat.py
+# hypothesis_version: 6.151.9
+
+['ChatInviteLink', 'ChatMember', 'Contact | None', 'FileInput | Audio', 'FileInput | Document', 'FileInput | None', 'FileInput | Sticker', 'FileInput | Video', 'FileInput | Voice', 'InputChecklist', 'InputPaidMedia', 'LabeledPrice', 'LinkPreviewOptions', 'Location | None', 'Message', 'MessageEntity', 'MessageId', 'OwnedGifts', 'ReplyMarkup | None', 'Story', 'UserChatBoosts', 'Venue | None', 'chat_id', 'first_name', 'id', 'is_direct_messages', 'is_forum', 'last_name', 'str | ChatInviteLink', 'str | Gift', 'title', 'type', 'user_id', 'username']

@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aegis Trader Mobile App Demo</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #0a0a0a;
+            color: #fff;
+            height: 100vh;
+            overflow: hidden;
+        }
+        .phone-frame {
+            width: 375px;
+            height: 812px;
+            margin: 20px auto;
+            background: #000;
+            border-radius: 40px;
+            padding: 10px;
+            box-shadow: 0 0 30px rgba(0,212,170,0.3);
+        }
+        .screen {
+            width: 100%;
+            height: 100%;
+            background: #0a0a0a;
+            border-radius: 30px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+        .status-bar {
+            height: 44px;
+            background: #1a1a1a;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 20px;
+            font-size: 14px;
+        }
+        .header {
+            height: 60px;
+            background: #0a0a0a;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-bottom: 1px solid #333;
+        }
+        .header h1 {
+            font-size: 18px;
+            font-weight: 600;
+        }
+        .content {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+        }
+        .card {
+            background: #1a1a1a;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 16px;
+        }
+        .card-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 16px;
+        }
+        .status-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+        .status-item {
+            text-align: center;
+        }
+        .status-value {
+            font-size: 20px;
+            font-weight: bold;
+            color: #00d4aa;
+        }
+        .status-label {
+            font-size: 12px;
+            color: #666;
+            margin-top: 4px;
+        }
+        .mode-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+        .mode-btn {
+            background: #333;
+            border: none;
+            border-radius: 8px;
+            padding: 16px 8px;
+            color: #fff;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .mode-btn.active {
+            background: #00d4aa;
+        }
+        .toggle-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .toggle {
+            width: 50px;
+            height: 30px;
+            background: #333;
+            border-radius: 15px;
+            position: relative;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .toggle.active {
+            background: #00d4aa;
+        }
+        .toggle-slider {
+            width: 26px;
+            height: 26px;
+            background: #fff;
+            border-radius: 13px;
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            transition: transform 0.2s;
+        }
+        .toggle.active .toggle-slider {
+            transform: translateX(20px);
+        }
+        .tab-bar {
+            height: 80px;
+            background: #1a1a1a;
+            display: flex;
+            border-top: 1px solid #333;
+        }
+        .tab {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            color: #666;
+            transition: color 0.2s;
+        }
+        .tab.active {
+            color: #00d4aa;
+        }
+        .tab-icon {
+            font-size: 24px;
+            margin-bottom: 4px;
+        }
+        .tab-label {
+            font-size: 10px;
+        }
+        .signal-item {
+            background: #2a2a2a;
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .signal-direction {
+            font-weight: bold;
+        }
+        .signal-long { color: #00d4aa; }
+        .signal-short { color: #ff4757; }
+        .grade-badge {
+            background: #00d4aa;
+            color: #000;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="phone-frame">
+        <div class="screen">
+            <div class="status-bar">
+                <span>9:41</span>
+                <span>📶 📶 📶 🔋</span>
+            </div>
+            
+            <div class="header">
+                <h1>⚡ Aegis Trader</h1>
+            </div>
+            
+            <div class="content" id="content">
+                <!-- Overview Tab -->
+                <div id="overview-tab">
+                    <div class="status-grid">
+                        <div class="status-item">
+                            <div class="status-value" id="mode-val">TRADE</div>
+                            <div class="status-label">Mode</div>
+                        </div>
+                        <div class="status-item">
+                            <div class="status-value" id="session-val">LONDON</div>
+                            <div class="status-label">Session</div>
+                        </div>
+                        <div class="status-item">
+                            <div class="status-value" id="trades-val">1/2</div>
+                            <div class="status-label">Trades</div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-title">Quick Controls</div>
+                        <div class="mode-grid">
+                            <button class="mode-btn" onclick="setMode('analyze')">🔍 Analyze</button>
+                            <button class="mode-btn active" onclick="setMode('trade')">⚡ Trade</button>
+                            <button class="mode-btn" onclick="setMode('swing')">📈 Swing</button>
+                        </div>
+                        <div class="toggle-row">
+                            <span>Auto Trading</span>
+                            <div class="toggle active" onclick="toggleAuto()">
+                                <div class="toggle-slider"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-title">Risk Status</div>
+                        <div class="status-grid">
+                            <div class="status-item">
+                                <div class="status-value">1/2</div>
+                                <div class="status-label">Trades Today</div>
+                            </div>
+                            <div class="status-item">
+                                <div class="status-value">0/2</div>
+                                <div class="status-label">Losses Today</div>
+                            </div>
+                            <div class="status-item">
+                                <div class="status-value">0.45%</div>
+                                <div class="status-label">Drawdown</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Signals Tab -->
+                <div id="signals-tab" style="display: none;">
+                    <div class="card">
+                        <div class="card-title">Recent Signals</div>
+                        <div class="signal-item">
+                            <div>
+                                <div class="signal-direction signal-long">LONG US30</div>
+                                <div style="font-size: 12px; color: #666;">Entry: 42,150 • SL: 42,100</div>
+                            </div>
+                            <div class="grade-badge">A+</div>
+                        </div>
+                        <div class="signal-item">
+                            <div>
+                                <div class="signal-direction signal-short">SHORT US30</div>
+                                <div style="font-size: 12px; color: #666;">Entry: 41,980 • SL: 42,030</div>
+                            </div>
+                            <div class="grade-badge" style="background: #ffa500;">A</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="tab-bar">
+                <div class="tab active" onclick="showTab('overview')">
+                    <div class="tab-icon">📊</div>
+                    <div class="tab-label">Overview</div>
+                </div>
+                <div class="tab" onclick="showTab('signals')">
+                    <div class="tab-icon">📈</div>
+                    <div class="tab-label">Signals</div>
+                </div>
+                <div class="tab" onclick="showTab('trades')">
+                    <div class="tab-icon">💰</div>
+                    <div class="tab-label">Trades</div>
+                </div>
+                <div class="tab" onclick="showTab('settings')">
+                    <div class="tab-icon">⚙️</div>
+                    <div class="tab-label">Settings</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function showTab(tabName) {
+            // Hide all tabs
+            document.getElementById('overview-tab').style.display = 'none';
+            document.getElementById('signals-tab').style.display = 'none';
+            
+            // Show selected tab
+            if (tabName === 'overview') {
+                document.getElementById('overview-tab').style.display = 'block';
+            } else if (tabName === 'signals') {
+                document.getElementById('signals-tab').style.display = 'block';
+            }
+            
+            // Update tab bar
+            document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+            event.target.closest('.tab').classList.add('active');
+        }
+
+        function setMode(mode) {
+            document.querySelectorAll('.mode-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+            document.getElementById('mode-val').textContent = mode.toUpperCase();
+        }
+
+        function toggleAuto() {
+            const toggle = event.target.closest('.toggle');
+            toggle.classList.toggle('active');
+        }
+
+        // Simulate real-time updates
+        setInterval(() => {
+            const time = new Date().toLocaleTimeString('en-US', {
+                hour12: false,
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+            document.querySelector('.status-bar span').textContent = time;
+        }, 1000);
+    </script>
+</body>
+</html>

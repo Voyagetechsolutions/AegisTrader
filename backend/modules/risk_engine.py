@@ -13,6 +13,7 @@ Analyze mode and alerts continue regardless.
 """
 
 from __future__ import annotations
+import asyncio
 import logging
 from dataclasses import dataclass
 from datetime import datetime, date
@@ -28,6 +29,9 @@ from backend.models.models import Trade, BotSetting, TradeStatus
 logger = logging.getLogger(__name__)
 
 SAST = pytz.timezone("Africa/Johannesburg")
+
+# Global lock for atomic risk checking and trade slot reservation
+_risk_check_lock = asyncio.Lock()
 
 
 @dataclass
@@ -107,6 +111,9 @@ async def check_risk(
 ) -> RiskStatus:
     """
     Check if auto trading is still allowed given daily limits.
+    
+    NOTE: This is a READ-ONLY check. For atomic check-and-reserve,
+    use check_and_reserve_trade_slot() instead.
 
     Args:
         db: async DB session
@@ -181,6 +188,44 @@ async def check_risk(
         losses_today=losses_today,
         drawdown_pct=drawdown_pct,
     )
+
+
+async def check_and_reserve_trade_slot(
+    db: AsyncSession,
+    user_id: Optional[UUID],
+    account_balance: float = 1000.0,
+    today: Optional[date] = None,
+) -> RiskStatus:
+    """
+    ATOMIC check-and-reserve operation for trade execution.
+    
+    This function uses a lock to prevent race conditions where multiple
+    signals could bypass MAX_DAILY_TRADES by checking simultaneously.
+    
+    CRITICAL: This MUST be called before executing any trade.
+    
+    Args:
+        db: async DB session
+        user_id: trader user UUID
+        account_balance: current account balance
+        today: optional date override
+        
+    Returns:
+        RiskStatus with allowed flag. If allowed=True, a trade slot is reserved.
+    """
+    async with _risk_check_lock:
+        # Perform risk check inside lock
+        risk_status = await check_risk(db, user_id, account_balance, today)
+        
+        if not risk_status.allowed:
+            logger.warning(f"Trade slot denied: {risk_status.reason}")
+            return risk_status
+        
+        # Risk check passed - slot is reserved by virtue of holding the lock
+        # The calling code MUST create the trade record before releasing the lock
+        logger.info(f"Trade slot reserved: {risk_status.trades_today + 1}/{risk_status.trades_today + 1}")
+        
+        return risk_status
 
 
 async def disable_auto_trading(

@@ -1,0 +1,4 @@
+# file: C:\Users\bathini bona\Documents\Aegis Trader\backend\strategy\engines\fvg_engine.py
+# hypothesis_version: 6.151.9
+
+[5.0, 10.0, 'bearish', 'bearish_fvg_retest', 'bottom', 'bullish', 'bullish_fvg_retest', 'filled', 'fvg:active', 'fvg_engine', 'multiple_fvgs', 'partially_filled', 'size', 'status', 'timeframe', 'timestamp', 'top', 'type', 'unfilled']

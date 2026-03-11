@@ -1,0 +1,4 @@
+# file: C:\Users\bathini bona\Documents\Aegis Trader\backend\schemas\schemas.py
+# hypothesis_version: 6.151.9
+
+[0.0, 10.0, '5', 'Active session name', 'AegisTrader', 'Setup classification', 'TVC:DJI', 'TradingView symbol', 'before', 'buy / sell / neutral', 'continuation_long', 'database', 'demo', 'from_attributes', 'high', 'mt5_node', 'neutral', 'raw_payload', 'telegram']

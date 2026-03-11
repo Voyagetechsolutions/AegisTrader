@@ -31,6 +31,7 @@ from backend.modules.session_filter import get_active_session
 from backend.modules.spread_filter import check_spread
 from backend.modules.news_filter import check_news_blackout
 from backend.modules.risk_engine import check_risk, disable_auto_trading
+from backend.modules.emergency_stop import check_emergency_stop
 
 logger = logging.getLogger(__name__)
 
@@ -60,20 +61,24 @@ def generate_idempotency_key(payload: TradingViewWebhookPayload) -> str:
     """
     Generate a unique key for the signal to prevent duplicates.
 
-    Uses: symbol + direction + entry + sl + tp1 + tp2 + 5-minute time bucket
+    Uses: symbol + direction + entry + sl + tp1 + tp2 + 30-second time bucket
+    
+    30-second bucket prevents:
+    - Duplicate webhook retries (same signal within 30s)
+    - False positives (different signals in same 5-min window)
     """
     now = datetime.now(pytz.UTC)
-    # Round to 5-minute bucket to catch rapid duplicate alerts
-    time_bucket = now.replace(second=0, microsecond=0)
-    time_bucket = time_bucket.replace(minute=(time_bucket.minute // 5) * 5)
+    # Round to 30-second bucket (tighter than 5-minute)
+    time_bucket = now.replace(microsecond=0)
+    time_bucket = time_bucket.replace(second=(time_bucket.second // 30) * 30)
 
     key_parts = [
         payload.symbol,
         payload.direction,
-        f"{payload.entry:.2f}",
-        f"{payload.stop_loss:.2f}",
-        f"{payload.tp1:.2f}",
-        f"{payload.tp2:.2f}",
+        f"{payload.entry:.4f}",  # 4 decimal precision
+        f"{payload.stop_loss:.4f}",
+        f"{payload.tp1:.4f}",
+        f"{payload.tp2:.4f}",
         time_bucket.isoformat(),
     ]
     key_string = "|".join(key_parts)
@@ -116,6 +121,17 @@ async def process_signal(
             existing_signal,
             "duplicate",
             f"Duplicate signal (existing: {existing_signal.id})"
+        )
+    
+    # ── 0.5. Emergency stop check ─────────────────────────────────────────
+    emergency_allowed, emergency_reason = await check_emergency_stop()
+    if not emergency_allowed:
+        logger.critical(f"Signal blocked by emergency stop: {emergency_reason}")
+        # Don't even create signal record during emergency stop
+        return SignalPipelineResult(
+            None,
+            "blocked",
+            f"Emergency stop: {emergency_reason}"
         )
 
     # ── 1. Load bot settings ──────────────────────────────────────────────
@@ -290,17 +306,28 @@ async def process_signal(
         )
 
     if bot_mode == BotMode.TRADE and score_result.auto_trade_eligible and auto_trade:
-        # Check risk limits before executing
-        if user_id:
-            risk = await check_risk(db, user_id, account_balance)
-            if not risk.allowed:
-                await disable_auto_trading(db, user_id, risk.reason or "Risk limit")
-                return SignalPipelineResult(
-                    signal,
-                    "alerted",
-                    f"Risk limit: {risk.reason}",
-                    score_result,
-                )
+        # ATOMIC risk check with trade slot reservation
+        # This prevents race conditions where multiple signals bypass MAX_DAILY_TRADES
+        try:
+            if user_id:
+                from backend.modules.risk_engine import check_and_reserve_trade_slot
+                risk = await check_and_reserve_trade_slot(db, user_id, account_balance)
+                if not risk.allowed:
+                    await disable_auto_trading(db, user_id, risk.reason or "Risk limit")
+                    return SignalPipelineResult(
+                        signal,
+                        "alerted",
+                        f"Risk limit: {risk.reason}",
+                        score_result,
+                    )
+        except Exception as e:
+            logger.critical(f"Risk check failed: {e} - BLOCKING trade for safety")
+            return SignalPipelineResult(
+                signal,
+                "alerted",
+                "Risk check unavailable - trade blocked for safety",
+                score_result,
+            )
 
         return SignalPipelineResult(
             signal,

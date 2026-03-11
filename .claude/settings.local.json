@@ -5,7 +5,17 @@
       "Bash(python -m backend.scripts.seed_defaults:*)",
       "Bash(Remove-Item \"c:\\\\Users\\\\bathini bona\\\\Documents\\\\Aegis Trader\\\\backend\\\\aegis_trader.db\" -ErrorAction SilentlyContinue)",
       "Bash(del /f \"c:\\\\Users\\\\bathini bona\\\\Documents\\\\Aegis Trader\\\\backend\\\\aegis_trader.db\")",
-      "Bash(python:*)"
+      "Bash(python:*)",
+      "Bash(venvScriptspip install pytest pytest-asyncio hypothesis --quiet)",
+      "Bash(.venvScriptspip.exe install pytest pytest-asyncio hypothesis)",
+      "Bash(\"C:/Users/bathini bona/Documents/Aegis Trader/venv/Scripts/pip.exe\" install pytest pytest-asyncio hypothesis)",
+      "Bash(\"C:/Users/bathini bona/Documents/Aegis Trader/venv/Scripts/python.exe\" -m pytest \"C:/Users/bathini bona/Documents/Aegis Trader/backend/tests/test_candle_aggregator.py\" -v --tb=short)",
+      "Bash(\"C:/Users/bathini bona/Documents/Aegis Trader/venv/Scripts/python.exe\" -m pytest \"C:/Users/bathini bona/Documents/Aegis Trader/backend/tests/\" -v --tb=short)",
+      "Bash(\"C:/Users/bathini bona/Documents/Aegis Trader/venv/Scripts/python.exe\" -m pytest:*)",
+      "Bash(\"C:/Users/bathini bona/Documents/Aegis Trader/venv/Scripts/python.exe\" -m pytest \"C:/Users/bathini bona/Documents/Aegis Trader/backend/tests/test_bias_engine.py\" -v --tb=short)",
+      "Bash(\"C:/Users/bathini bona/Documents/Aegis Trader/venv/Scripts/python.exe\" -m pytest \"C:/Users/bathini bona/Documents/Aegis Trader/backend/tests/test_level_engine.py\" -v --tb=short)",
+      "Bash(\"C:/Users/bathini bona/Documents/Aegis Trader/venv/Scripts/python.exe\" -m pytest \"C:/Users/bathini bona/Documents/Aegis Trader/backend/tests/test_signal_generator.py\" -v --tb=short)",
+      "Bash(\"C:/Users/bathini bona/Documents/Aegis Trader/venv/Scripts/python.exe\" -m pytest \"C:/Users/bathini bona/Documents/Aegis Trader/backend/tests/test_market_data.py\" \"C:/Users/bathini bona/Documents/Aegis Trader/backend/tests/test_candle_aggregator.py\" \"C:/Users/bathini bona/Documents/Aegis Trader/backend/tests/test_bias_engine.py\" \"C:/Users/bathini bona/Documents/Aegis Trader/backend/tests/test_level_engine.py\" \"C:/Users/bathini bona/Documents/Aegis Trader/backend/tests/test_analysis_engines.py\" \"C:/Users/bathini bona/Documents/Aegis Trader/backend/tests/test_signal_generator.py\" --tb=line)"
     ]
   }
 }

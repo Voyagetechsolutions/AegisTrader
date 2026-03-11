@@ -1,0 +1,4 @@
+# file: C:\Users\bathini bona\Documents\Aegis Trader\backend\strategy\engines\structure_engine.py
+# hypothesis_version: 6.151.9
+
+[5.0, 10.0, 15.0, 'bearish_bos', 'bearish_choch', 'bos', 'break_price', 'bullish', 'bullish_bos', 'bullish_choch', 'choch', 'direction', 'level', 'structure:breaks', 'structure:trends', 'structure_engine', 'timeframe', 'timestamp', 'trend_established', 'type']

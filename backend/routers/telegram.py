@@ -16,6 +16,7 @@ Supported commands (per spec):
 from __future__ import annotations
 import logging
 import inspect
+from html import escape
 
 from fastapi import APIRouter, Depends, Request
 from sqlalchemy import select, func
@@ -112,7 +113,7 @@ async def handle_mode(db: AsyncSession, mode_arg: str) -> str:
     }
     new_mode = mode_map.get(mode_arg.lower())
     if not new_mode:
-        return f"Unknown mode: <code>{mode_arg}</code>\nValid: analyze | trade | swing"
+        return f"Unknown mode: <code>{escape(mode_arg)}</code>\nValid: analyze | trade | swing"
 
     s = await _get_settings(db)
     if not s:
@@ -188,6 +189,12 @@ async def telegram_webhook(request: Request, db: AsyncSession = Depends(get_db))
     if not text or not chat_id:
         return {"ok": True}
 
+    # Validate authorized chat
+    from backend.config import settings
+    if settings.telegram_chat_id and chat_id != settings.telegram_chat_id:
+        logger.warning("Unauthorized Telegram chat attempt: %s", escape(chat_id))
+        return {"ok": True}  # Return OK to avoid retry
+
     # Parse command and optional argument
     parts = text.split()
     command = parts[0].lower().split("@")[0]  # handle /cmd@botname
@@ -204,18 +211,18 @@ async def telegram_webhook(request: Request, db: AsyncSession = Depends(get_db))
                 reply = await handler()
         else:
             reply = (
-                "<b>Aegis Trader Commands:</b>\n"
-                "/status - Bot status\n"
-                "/start - Enable auto trading\n"
-                "/stop - Disable auto trading\n"
-                "/mode [analyze|trade|swing] - Switch mode\n"
-                "/positions - Open positions\n"
-                "/closeall - Close all trades\n"
-                "/overview - Weekly market overview"
+                f"<b>Aegis Trader Commands:</b>\n"
+                f"/status - Bot status\n"
+                f"/start - Enable auto trading\n"
+                f"/stop - Disable auto trading\n"
+                f"/mode [analyze|trade|swing] - Switch mode\n"
+                f"/positions - Open positions\n"
+                f"/closeall - Close all trades\n"
+                f"/overview - Weekly market overview"
             )
     except Exception as e:
         logger.error(f"Command handler error: {e}")
-        reply = f"Error processing command: {e}"
+        reply = f"Error processing command: {escape(str(e))}"
 
     await send_message(reply, chat_id=chat_id)
     return {"ok": True}

@@ -1,0 +1,4 @@
+# file: C:\Users\bathini bona\Documents\Aegis Trader\backend\strategy\candle_aggregator.py
+# hypothesis_version: 6.151.9
+
+[100, 240, 1440, 10080, 'candle_aggregator', 'close', 'high', 'low', 'open', 'volume']

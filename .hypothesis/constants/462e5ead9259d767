@@ -1,0 +1,4 @@
+# file: C:\Users\bathini bona\Documents\Aegis Trader\backend\models\__init__.py
+# hypothesis_version: 6.151.9
+
+['BotMode', 'BotSetting', 'LotMode', 'NewsEvent', 'SetupType', 'Signal', 'SignalDirection', 'SignalGrade', 'SpreadSample', 'StrategyStat', 'Trade', 'TradeCloseReason', 'TradeLog', 'TradeState', 'TradeStatus', 'User', 'WeeklyReport']

@@ -1,0 +1,4 @@
+# file: C:\Users\bathini bona\Documents\Aegis Trader\backend\routers\telegram.py
+# hypothesis_version: 6.151.9
+
+['+', '/closeall', '/mode', '/overview', '/positions', '/start', '/status', '/stop', '/telegram', '/webhook', '@', 'Bot not configured.', 'Telegram', 'analyze', 'chat', 'db', 'fixed_lot', 'id', 'message', 'ok', 'risk_percent', 'swing', 'text', 'trade', '─']

@@ -70,11 +70,18 @@ async def _check_connection_health() -> dict[str, bool]:
         "mt5_node": False,
     }
 
-    # Check MT5 node
+    # Check MT5 node via heartbeat
     try:
-        balance = await mt5_bridge.get_account_balance()
-        health["mt5_node"] = balance > 0
-    except Exception:
+        from backend.routers.mt5_heartbeat import last_heartbeat
+        from datetime import datetime
+        
+        if last_heartbeat is not None:
+            seconds_since = (datetime.utcnow() - last_heartbeat).total_seconds()
+            health["mt5_node"] = seconds_since < 60  # Connected if heartbeat within 60s
+        else:
+            health["mt5_node"] = False
+    except Exception as e:
+        logger.error(f"Error checking MT5 health: {e}")
         health["mt5_node"] = False
 
     # Telegram check would require a test message - skip for now
@@ -512,3 +519,58 @@ async def health_check(db: AsyncSession = Depends(get_db)):
         "components": health,
         "timestamp": datetime.now(pytz.UTC).isoformat(),
     }
+
+
+
+# ---------------------------------------------------------------------------
+# Emergency Stop
+# ---------------------------------------------------------------------------
+
+@router.post("/emergency-stop", summary="Activate emergency stop")
+async def activate_emergency_stop_endpoint(
+    reason: str,
+    close_positions: bool = False,
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    🚨 EMERGENCY STOP - Immediately halt all trading.
+    
+    Args:
+        reason: Reason for emergency stop
+        close_positions: If true, close all open positions
+    """
+    from backend.modules.emergency_stop import activate_emergency_stop
+    
+    result = await activate_emergency_stop(
+        db,
+        reason=reason,
+        close_positions=close_positions,
+        mt5_bridge=mt5_bridge,
+    )
+    
+    return result
+
+
+@router.post("/emergency-stop/deactivate", summary="Deactivate emergency stop")
+async def deactivate_emergency_stop_endpoint(
+    authorized_by: str,
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Deactivate emergency stop - allow trading to resume.
+    
+    Note: Auto-trading will remain disabled and must be manually re-enabled.
+    """
+    from backend.modules.emergency_stop import deactivate_emergency_stop
+    
+    result = await deactivate_emergency_stop(db, authorized_by=authorized_by)
+    
+    return result
+
+
+@router.get("/emergency-stop/status", summary="Get emergency stop status")
+async def get_emergency_stop_status_endpoint():
+    """Get current emergency stop status."""
+    from backend.modules.emergency_stop import get_emergency_stop_status
+    
+    return get_emergency_stop_status()

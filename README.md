@@ -7,11 +7,11 @@
 ## System Overview
 
 ```
-TradingView (Pine Script) → Render Backend (FastAPI) → Telegram Bot
-                                    ↑ ↓
-                          MQL5 Expert Advisor (EA)
-                                     ↓
-                          MetaTrader 5 Terminal
+Strategy Engine → Render Backend (FastAPI) → Telegram Bot
+                          ↑ ↓
+                MQL5 Expert Advisor (EA)
+                          ↓
+                MetaTrader 5 Terminal
 ```
 
 | Component | Location | Purpose |
@@ -19,7 +19,6 @@ TradingView (Pine Script) → Render Backend (FastAPI) → Telegram Bot
 | `backend/` | Render (cloud) | Signal processing, risk, alerts |
 | `mql5/` | MT5 Terminal | Execution bridge (Expert Advisor) |
 | `dashboard/` | Static web | Mobile-first control panel |
-| `pinescript/` | TradingView | Signal detection indicator |
 | `database/` | PostgreSQL/Supabase | All persistent data |
 
 ---
@@ -71,26 +70,10 @@ Edit `dashboard/js/api.js` and set `API_BASE` to your Render URL.
 | `DATABASE_URL` | PostgreSQL connection string (asyncpg) |
 | `TELEGRAM_BOT_TOKEN` | Bot token from @BotFather |
 | `TELEGRAM_CHAT_ID` | Your Telegram chat/group ID |
-| `WEBHOOK_SECRET` | Shared secret between TradingView and backend |
 | `MT5_NODE_URL` | URL of the Windows VPS MT5 node |
 | `MT5_NODE_SECRET` | Shared secret for MT5 node auth |
-| `MT5_ACCOUNT` | MT5 account number |
-| `MT5_PASSWORD` | MT5 account password |
-| `MT5_SERVER` | MT5 broker server name |
 | `NEWS_FILTER_BYPASS` | Set `true` to skip news filter (testing) |
 | `TIMEZONE` | `Africa/Johannesburg` (SAST) |
-
----
-
-## TradingView Setup
-
-1. Open US30 chart on a **5M** timeframe
-2. Go to **Pine Editor** → paste contents of `pinescript/aegis_trader.pine` → Save & Add to Chart
-3. In **Alerts**, create a new alert:
-   - Condition: `Aegis Long Setup` or `Aegis Short Setup`
-   - Webhook URL: `https://your-render-app.onrender.com/webhook/tradingview`
-   - Message: *(leave as default – Pine Script sends the JSON)*
-4. Set your `webhook_secret` input in the indicator to match your `.env`
 
 ---
 
@@ -202,7 +185,7 @@ Aegis Trader/
 │   │   ├── risk_engine.py
 │   │   └── analytics_engine.py
 │   ├── routers/             # API endpoints
-│   │   ├── webhook.py       # /webhook/tradingview
+│   │   ├── webhook.py       # /execution/callback
 │   │   ├── telegram.py      # /telegram/webhook
 │   │   ├── dashboard.py     # /dashboard/*
 │   │   └── mt5_bridge.py    # MT5 HTTP client
@@ -217,8 +200,6 @@ Aegis Trader/
 │   └── js/
 │       ├── api.js
 │       └── app.js
-├── pinescript/
-│   └── aegis_trader.pine    # TradingView indicator
 ├── database/
 │   └── schema.sql
 ├── docker-compose.yml

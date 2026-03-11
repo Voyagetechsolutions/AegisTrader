@@ -5,6 +5,7 @@ Uses python-telegram-bot in async mode.
 """
 
 from __future__ import annotations
+import asyncio
 import logging
 from typing import Optional
 
@@ -17,15 +18,33 @@ from backend.models.models import Signal, Trade, NewsEvent
 
 logger = logging.getLogger(__name__)
 
-_bot: Optional[Bot] = None
 
-
-def get_bot() -> Bot:
-    """Lazily initialise the Telegram bot singleton."""
-    global _bot
-    if _bot is None:
-        _bot = Bot(token=settings.telegram_bot_token)
-    return _bot
+class TelegramManager:
+    """Thread-safe Telegram bot manager."""
+    
+    _instance: Optional['TelegramManager'] = None
+    _instance_lock = asyncio.Lock()
+    
+    def __init__(self):
+        self._bot: Optional[Bot] = None
+        self._lock = asyncio.Lock()
+    
+    @classmethod
+    async def get_instance(cls) -> 'TelegramManager':
+        """Get singleton instance with thread-safe initialization."""
+        if cls._instance is None:
+            async with cls._instance_lock:
+                if cls._instance is None:
+                    cls._instance = cls()
+        return cls._instance
+    
+    async def get_bot(self) -> Bot:
+        """Get or create bot instance with thread-safe initialization."""
+        if self._bot is None:
+            async with self._lock:
+                if self._bot is None:  # Double-check
+                    self._bot = Bot(token=settings.telegram_bot_token)
+        return self._bot
 
 
 async def send_message(text: str, chat_id: Optional[str] = None) -> bool:
@@ -35,7 +54,9 @@ async def send_message(text: str, chat_id: Optional[str] = None) -> bool:
         logger.warning("Telegram not configured - skipping alert")
         return False
     try:
-        await get_bot().send_message(
+        manager = await TelegramManager.get_instance()
+        bot = await manager.get_bot()
+        await bot.send_message(
             chat_id=target,
             text=text,
             parse_mode=ParseMode.HTML,
@@ -330,4 +351,18 @@ async def send_weekly_overview(
         f"{'─' * 28}\n"
         f"<b>Major news:</b>\n{news_text}"
     )
+    return await send_message(text)
+
+
+
+async def send_critical_alert(message: str) -> bool:
+    """
+    Send critical system alert with high priority formatting.
+    
+    Used for:
+    - Emergency stop activation/deactivation
+    - Critical trade management failures
+    - System errors requiring immediate attention
+    """
+    text = f"🚨 <b>CRITICAL ALERT</b> 🚨\n\n{message}"
     return await send_message(text)

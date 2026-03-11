@@ -1,0 +1,4 @@
+# file: C:\Users\bathini bona\Documents\Aegis Trader\backend\modules\news_filter.py
+# hypothesis_version: 6.151.9
+
+[200, '%Y-%m-%d', '%Y-%m-%d %I:%M%p', 'Africa/Johannesburg', 'America/New_York', 'Calendar unavailable', 'US', 'USD', 'Unknown', 'country', 'cpi', 'date', 'employment', 'fed chair', 'fed speech', 'federal', 'fomc', 'forexfactory', 'gdp', 'high', 'holiday', 'impact', 'inflation', 'interest rate', 'manual', 'nfp', 'non-farm', 'powell', 'rate decision', 'time', 'title', 'treasury secretary', 'yellen']

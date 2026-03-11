@@ -1,0 +1,4 @@
+# file: C:\Users\bathini bona\Documents\Aegis Trader\backend\strategy\compatibility.py
+# hypothesis_version: 6.151.9
+
+[0.01, 1.2, 2.0, 'US30', 'alert_sent', 'analyze', 'auto_trade_enabled', 'available', 'bot_mode_info', 'compatibility_check', 'confluence_adapter', 'confluence_grade', 'confluence_score', 'confluence_scoring', 'connected', 'current_price', 'daily_bias', 'direction', 'displacement_score', 'entry_price', 'error', 'errors', 'execution_details', 'fill_price', 'fvg_score', 'h1_bias', 'h4_bias', 'level_125', 'level_250', 'liquidity_score', 'long', 'lot_size', 'm15_bias', 'm5_bias', 'mode', 'mt5_adapter', 'mt5_bridge', 'neutral', 'pnl', 'positions_count', 'short', 'signal_id', 'slippage', 'strategy_engine', 'structure_score', 'success', 'symbol', 'system_compatibility', 'telegram', 'telegram_adapter', 'ticket', 'timestamp', 'trade_executed', 'unavailable', 'unknown', 'weekly_bias']

@@ -1,0 +1,4 @@
+# file: C:\Users\bathini bona\Documents\Aegis Trader\backend\strategy\bot_mode_manager.py
+# hypothesis_version: 6.151.9
+
+[2.0, 10.0, 300, '10:00', '13:00', '15:30', '17:30', '20:00', '22:00', 'TVC:DJI', 'US30', 'action', 'alerted', 'analysis_symbol', 'analyze', 'auto_trade_enabled', 'bot_mode_manager', 'default', 'disabled', 'enabled', 'end', 'error', 'execute', 'executed', 'execution_symbol', 'london', 'max_losses_per_day', 'max_slippage_points', 'max_trades_per_day', 'mode', 'new_york', 'power_hour', 'reason', 'risk_config', 'sessions', 'start']

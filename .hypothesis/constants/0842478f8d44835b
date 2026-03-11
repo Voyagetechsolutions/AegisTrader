@@ -1,0 +1,4 @@
+# file: C:\Users\bathini bona\Documents\Aegis Trader\backend\strategy\logging_config.py
+# hypothesis_version: 6.151.9
+
+[5.0, 100, 400, 'INFO', 'average', 'component', 'current', 'error_breakdown', 'error_counts', 'last_signal_grade', 'last_signal_score', 'max', 'memory_usage', 'min', 'monitored_components', 'peak', 'performance', 'process_cycle', 'processing_times', 'samples', 'signal_counts', 'signals_', 'strategy', 'strategy_engine', 'timestamp', 'total_errors']

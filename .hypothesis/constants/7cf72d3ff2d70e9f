@@ -1,0 +1,4 @@
+# file: C:\Users\bathini bona\Documents\Aegis Trader\backend\strategy\risk_integration.py
+# hypothesis_version: 6.151.9
+
+[0.0, 1000.0, '; ', 'Africa/Johannesburg', 'Risk limit exceeded', 'active', 'allowed', 'approved', 'current', 'denied_grade', 'denied_risk', 'denied_session', 'direction', 'drawdown_pct', 'grade', 'losses_today', 'override_enabled', 'reason', 'risk', 'risk:auth_log', 'risk:auth_stats', 'risk_integration', 'session', 'signal_id', 'stats', 'timestamp', 'trades_today']

@@ -1,0 +1,4 @@
+# file: C:\Users\bathini bona\Documents\Aegis Trader\backend\strategy\engines\level_engine.py
+# hypothesis_version: 6.151.9
+
+[0.0, 5.0, 8.0, 10.0, 15.0, '125', '250', 'above', 'below', 'distance_to_125', 'distance_to_250', 'level_engine', 'levels:current', 'levels:history', 'near_125_level', 'near_250_level', 'nearest_125', 'nearest_250', 'price', 'timestamp']

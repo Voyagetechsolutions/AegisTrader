@@ -1,0 +1,4 @@
+# file: C:\Users\bathini bona\Documents\Aegis Trader\backend\strategy\engines\displacement_engine.py
+# hypothesis_version: 6.151.9
+
+[0.0, 0.8, 1.0, 3.0, 5.0, 8.0, 12.0, 100.0, 100, 'bearish_displacement', 'body_pct', 'bullish_displacement', 'direction', 'displacement:history', 'displacement_engine', 'index', 'range', 'recent_displacement', 'strength', 'strong_displacement', 'timeframe', 'timestamp']

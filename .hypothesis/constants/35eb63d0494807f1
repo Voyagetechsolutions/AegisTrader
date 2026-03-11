@@ -1,0 +1,4 @@
+# file: C:\Users\bathini bona\Documents\Aegis Trader\backend\routers\mt5_bridge.py
+# hypothesis_version: 6.151.9
+
+[0.0, 2.0, 999.0, 'Command not found', 'Unknown error', 'action', 'balance', 'close_partial', 'error', 'id', 'lot_size', 'message', 'modify_sl', 'place_order', 'sl_price', 'success', 'symbol', 'ticket']

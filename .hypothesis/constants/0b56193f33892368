@@ -1,0 +1,4 @@
+# file: C:\Users\bathini bona\Documents\Aegis Trader\backend\schemas\__init__.py
+# hypothesis_version: 6.151.9
+
+['BotSettingOut', 'BotSettingUpdate', 'DashboardStatus', 'MT5CloseRequest', 'MT5ModifyRequest', 'MT5OrderRequest', 'MT5OrderResponse', 'MT5Position', 'SignalOut', 'TelegramUpdate', 'TradeOut']

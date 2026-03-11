@@ -1,0 +1,4 @@
+# file: C:\Users\bathini bona\AppData\Roaming\Python\Python314\site-packages\telegram\_ownedgift.py
+# hypothesis_version: 6.151.9
+
+['Bot | None', 'OwnedGift', 'OwnedGiftRegular', 'OwnedGiftUnique', 'OwnedGifts', 'can_be_transferred', 'can_be_upgraded', 'convert_star_count', 'entities', 'gift', 'gifts', 'is_private', 'is_saved', 'is_upgrade_separate', 'next_offset', 'next_transfer_date', 'owned_gift_id', 'send_date', 'sender_user', 'text', 'total_count', 'transfer_star_count', 'type', 'unique_gift_number', 'was_refunded']

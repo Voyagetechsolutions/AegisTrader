@@ -1,0 +1,4 @@
+# file: C:\Users\bathini bona\Documents\Aegis Trader\backend\strategy\performance_monitor.py
+# hypothesis_version: 6.151.9
+
+[0.0, 0.1, 0.8, 5.0, 100, 400, 512, 1024, 'average_cycle_time', 'avg_cycle_time', 'cpu_percent', 'cpu_usage_percent', 'cycle_count', 'degraded', 'healthy', 'issues', 'memory_limit_mb', 'memory_mb', 'memory_percent', 'memory_usage', 'memory_usage_mb', 'memory_usage_percent', 'metrics', 'performance_monitor', 'processing_time', 'status', 'strategy_engine', 'timestamp', 'unhealthy', 'uptime', 'uptime_formatted', 'uptime_seconds', 'violations']

@@ -1,0 +1,4 @@
+# file: C:\Users\bathini bona\Documents\Aegis Trader\backend\strategy\engines\liquidity_engine.py
+# hypothesis_version: 6.151.9
+
+[12.0, 'buy_side', 'candle_high', 'candle_low', 'extension', 'level', 'liquidity:sweeps', 'liquidity_engine', 'recent_buyside_sweep', 'sell_side', 'timeframe', 'timestamp', 'type']

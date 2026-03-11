@@ -1,0 +1,4 @@
+# file: C:\Users\bathini bona\Documents\Aegis Trader\backend\strategy\signal_generator.py
+# hypothesis_version: 6.151.9
+
+[0.0, 1.5, 2.0, 3.0, 5.0, 8.0, 10.0, 12.0, 15.0, 50.0, 100.0, ':', 'Africa/Johannesburg', 'bias', 'bos', 'choch', 'displacement', 'end', 'entry', 'fvg', 'levels', 'liquidity', 'london', 'new_york', 'power_hour', 'session_bonus', 'signal_generator', 'signals:recent', 'start', 'stop_loss', 'structure', 'take_profit', 'total', 'type']

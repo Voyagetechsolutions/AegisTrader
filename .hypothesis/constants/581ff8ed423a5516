@@ -1,0 +1,4 @@
+# file: C:\Users\bathini bona\Documents\Aegis Trader\backend\strategy\models.py
+# hypothesis_version: 6.151.9
+
+[0.0, 'A', 'A+', 'B', 'Daily', 'H1', 'H4', 'M1', 'M15', 'M5', 'Weekly', 'active_fvgs', 'analysis_breakdown', 'bear_shift', 'bearish', 'bias', 'break_type', 'bull_shift', 'bullish', 'close', 'confluence_score', 'continuation_long', 'continuation_short', 'current_trend', 'direction', 'displacement', 'distance_to_125', 'distance_to_250', 'ema_distance', 'entry', 'fvg', 'grade', 'high', 'levels', 'liquidity', 'long', 'low', 'nearest_125', 'nearest_250', 'neutral', 'open', 'recent_breaks', 'recent_displacement', 'recent_sweeps', 'retest_opportunity', 'setup_type', 'short', 'stop_loss', 'strength', 'structure', 'structure_shift', 'sweep_type', 'swing_long', 'swing_short', 'take_profit', 'time_since_sweep', 'timeframe', 'timestamp', 'volume']

@@ -1,0 +1,4 @@
+# file: C:\Users\bathini bona\Documents\Aegis Trader\backend\modules\trade_manager.py
+# hypothesis_version: 6.151.9
+
+[0.0, 0.01, 0.1, 0.4, 0.5, 100.0, 1000.0, 100, 'Africa/Johannesburg', 'Order executed', 'Sending order to MT5', 'Stop loss hit', 'be_price', 'broker_order_id', 'buy', 'demo', 'error', 'executed', 'execution_callback', 'execution_failed', 'execution_pending', 'failed', 'fill_price', 'long', 'lots_closed', 'order_request', 'pnl', 'reason', 'rejected', 'runner_lots', 'sell', 'slippage', 'slippage_points', 'stopped_out', 'ticket', 'tp1_hit', 'tp2_hit', 'trade_closed', 'value']

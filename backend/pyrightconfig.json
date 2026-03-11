@@ -1,0 +1,22 @@
+{
+    "include": [
+        "."
+    ],
+    "exclude": [
+        "**/node_modules",
+        "**/__pycache__",
+        ".git",
+        ".hypothesis",
+        ".pytest_cache"
+    ],
+    "reportMissingImports": "warning",
+    "reportMissingTypeStubs": false,
+    "reportAttributeAccessIssue": "warning",
+    "reportGeneralTypeIssues": "warning",
+    "reportOptionalMemberAccess": "warning",
+    "reportArgumentType": "warning",
+    "reportCallIssue": "warning",
+    "reportReturnType": "warning",
+    "pythonVersion": "3.11",
+    "typeCheckingMode": "basic"
+}

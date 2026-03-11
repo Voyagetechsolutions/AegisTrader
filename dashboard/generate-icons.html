@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Aegis Trader Icon Generator</title>
+</head>
+<body>
+    <h2>Aegis Trader PWA Icon Generator</h2>
+    <p>This will generate all required PWA icons. Right-click each canvas and "Save image as..."</p>
+    
+    <div id="icons"></div>
+
+    <script>
+        const sizes = [72, 96, 128, 144, 152, 192, 384, 512];
+        const iconsDiv = document.getElementById('icons');
+
+        sizes.forEach(size => {
+            // Create canvas
+            const canvas = document.createElement('canvas');
+            canvas.width = size;
+            canvas.height = size;
+            canvas.style.border = '1px solid #ccc';
+            canvas.style.margin = '10px';
+            
+            const ctx = canvas.getContext('2d');
+            
+            // Background gradient
+            const gradient = ctx.createLinearGradient(0, 0, size, size);
+            gradient.addColorStop(0, '#00d4aa');
+            gradient.addColorStop(1, '#0099cc');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, size, size);
+            
+            // Lightning bolt icon
+            ctx.fillStyle = '#ffffff';
+            ctx.font = `bold ${size * 0.6}px Arial`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('⚡', size / 2, size / 2);
+            
+            // Add label
+            const label = document.createElement('p');
+            label.textContent = `icon-${size}x${size}.png`;
+            label.style.textAlign = 'center';
+            label.style.margin = '0';
+            
+            const container = document.createElement('div');
+            container.style.display = 'inline-block';
+            container.style.textAlign = 'center';
+            container.appendChild(canvas);
+            container.appendChild(label);
+            
+            iconsDiv.appendChild(container);
+        });
+    </script>
+</body>
+</html>

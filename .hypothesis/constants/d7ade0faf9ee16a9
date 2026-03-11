@@ -1,0 +1,4 @@
+# file: C:\Users\bathini bona\Documents\Aegis Trader\backend\modules\confluence_scoring.py
+# hypothesis_version: 6.151.9
+
+[100, 150, 'A', 'A+', 'B', 'FVG', 'MSS', 'bear', 'bear_shift', 'bearish', 'bull', 'bull_shift', 'bullish', 'buy', 'continuation_long', 'continuation_short', 'displacement', 'fvg', 'htf_alignment', 'level_125', 'level_250', 'liquidity sweep', 'liquidity_sweep', 'long', 'mss', 'neutral', 'sell', 'session', 'short', 'spread', 'swing_long', 'swing_short']

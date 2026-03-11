@@ -1,0 +1,4 @@
+# file: C:\Users\bathini bona\AppData\Roaming\Python\Python314\site-packages\telegram\_gifts.py
+# hypothesis_version: 6.151.9
+
+['Bot | None', 'Gift', 'GiftInfo', 'Gifts', 'background', 'can_be_upgraded', 'center_color', 'convert_star_count', 'edge_color', 'entities', 'gift', 'gifts', 'gifts_from_channels', 'has_colors', 'id', 'is_premium', 'is_private', 'is_upgrade_separate', 'limited_gifts', 'owned_gift_id', 'personal_total_count', 'premium_subscription', 'publisher_chat', 'remaining_count', 'star_count', 'sticker', 'text', 'text_color', 'total_count', 'unique_gift_number', 'unique_gifts', 'unlimited_gifts', 'upgrade_star_count']

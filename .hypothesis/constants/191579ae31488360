@@ -1,0 +1,4 @@
+# file: C:\Users\bathini bona\Documents\Aegis Trader\backend\modules\session_filter.py
+# hypothesis_version: 6.151.9
+
+['10:00', '13:00', '15:30', '17:30', '20:00', '22:00', ':', 'Africa/Johannesburg', 'end', 'london', 'new_york', 'power_hour', 'start']

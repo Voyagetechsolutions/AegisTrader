@@ -1,18 +1,20 @@
 from pydantic_settings import BaseSettings
+from pydantic import Field, field_validator
 from functools import lru_cache
 from pathlib import Path
 
 # Get absolute path to backend directory for database
 _BACKEND_DIR = Path(__file__).resolve().parent
 _DEFAULT_DB_PATH = _BACKEND_DIR / "aegis_trader.db"
+_PROJECT_ROOT = _BACKEND_DIR.parent
+_ENV_FILE = _PROJECT_ROOT / ".env"
 
 
 class Settings(BaseSettings):
     # Application
     app_env: str = "development"
     port: int = 8000
-    webhook_secret: str = "changeme"
-    dashboard_jwt_secret: str = "changeme_jwt"
+    dashboard_jwt_secret: str = Field(..., min_length=32, description="JWT signing secret")
 
     # Database (using SQLite for local dev with absolute path)
     database_url: str = f"sqlite+aiosqlite:///{_DEFAULT_DB_PATH}"
@@ -23,7 +25,7 @@ class Settings(BaseSettings):
 
     # MT5 Execution Node
     mt5_node_url: str = "http://localhost:8001"
-    mt5_node_secret: str = "changeme_mt5"
+    mt5_node_secret: str = Field(default="", min_length=16, description="MT5 node authentication secret")
 
     # Risk Defaults
     max_daily_trades: int = 2
@@ -38,8 +40,15 @@ class Settings(BaseSettings):
     # Timezone
     timezone: str = "Africa/Johannesburg"
 
+    @field_validator('dashboard_jwt_secret', 'mt5_node_secret')
+    @classmethod
+    def validate_secrets(cls, v: str, info) -> str:
+        if v in ('changeme', 'changeme_jwt', 'changeme_mt5', 'test', 'secret'):
+            raise ValueError(f"{info.field_name} must not use default/weak values")
+        return v
+
     class Config:
-        env_file = ".env"
+        env_file = str(_ENV_FILE)
         case_sensitive = False
 
 

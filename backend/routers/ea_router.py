@@ -19,6 +19,12 @@ router = APIRouter(prefix="/mt5", tags=["MT5 EA Integration"])
 
 AUTH_HEADER = "X-MT5-Secret"
 
+
+def _sanitize_log(s: str) -> str:
+    """Sanitize string for safe logging by removing control characters."""
+    return str(s).replace('\n', '\\n').replace('\r', '\\r').replace('\t', '\\t')[:200]
+
+
 def verify_secret(x_mt5_secret: str = Header(None)):
     if x_mt5_secret != settings.mt5_node_secret:
         raise HTTPException(
@@ -46,7 +52,7 @@ async def poll_commands(x_mt5_secret: str = Header(None)) -> List[Dict[str, Any]
     mt5_bridge.command_queue.clear()
     
     if commands:
-        logger.info(f"EA polled {len(commands)} commands")
+        logger.info("EA polled commands", extra={"count": len(commands)})
         
     return commands
 
@@ -77,6 +83,12 @@ async def report_result(result: EAResult, x_mt5_secret: str = Header(None)):
         
         # Remove from pending dictionary
         mt5_bridge.pending_results.pop(cmd_id, None)
-        logger.info(f"EA reported result for command {cmd_id}: {result.status}")
+        logger.info(
+            "EA reported result",
+            extra={
+                "command_id": _sanitize_log(cmd_id),
+                "status": _sanitize_log(result.status)
+            }
+        )
         
     return {"status": "ok"}

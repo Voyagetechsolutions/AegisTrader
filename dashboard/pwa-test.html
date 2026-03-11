@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PWA Test - Aegis Trader</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .card {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .status {
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        .success { background: #d4edda; color: #155724; }
+        .warning { background: #fff3cd; color: #856404; }
+        .error { background: #f8d7da; color: #721c24; }
+        button {
+            background: #00d4aa;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover { background: #00b894; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h1>🚀 Aegis Trader PWA Test</h1>
+        <p>This page tests if your Progressive Web App is working correctly.</p>
+    </div>
+
+    <div class="card">
+        <h2>📱 PWA Features</h2>
+        <div id="pwaStatus"></div>
+        <button onclick="testInstallPrompt()">Test Install Prompt</button>
+        <button onclick="testNotifications()">Test Notifications</button>
+    </div>
+
+    <div class="card">
+        <h2>🔧 Service Worker</h2>
+        <div id="swStatus"></div>
+        <button onclick="updateCache()">Update Cache</button>
+    </div>
+
+    <div class="card">
+        <h2>📊 Installation Instructions</h2>
+        <div id="installInstructions"></div>
+    </div>
+
+    <script>
+        // Check PWA features
+        function checkPWAFeatures() {
+            const statusDiv = document.getElementById('pwaStatus');
+            let html = '';
+
+            // Check if running as PWA
+            if (window.matchMedia('(display-mode: standalone)').matches) {
+                html += '<div class="status success">✅ Running as installed PWA</div>';
+            } else {
+                html += '<div class="status warning">⚠️ Running in browser (not installed)</div>';
+            }
+
+            // Check service worker support
+            if ('serviceWorker' in navigator) {
+                html += '<div class="status success">✅ Service Worker supported</div>';
+            } else {
+                html += '<div class="status error">❌ Service Worker not supported</div>';
+            }
+
+            // Check manifest
+            const manifestLink = document.querySelector('link[rel="manifest"]');
+            if (manifestLink) {
+                html += '<div class="status success">✅ Manifest found</div>';
+            } else {
+                html += '<div class="status error">❌ Manifest not found</div>';
+            }
+
+            statusDiv.innerHTML = html;
+        }
+
+        // Check service worker status
+        function checkServiceWorker() {
+            const statusDiv = document.getElementById('swStatus');
+            
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.getRegistration().then(registration => {
+                    if (registration) {
+                        statusDiv.innerHTML = '<div class="status success">✅ Service Worker registered and active</div>';
+                    } else {
+                        statusDiv.innerHTML = '<div class="status warning">⚠️ Service Worker not registered</div>';
+                    }
+                });
+            } else {
+                statusDiv.innerHTML = '<div class="status error">❌ Service Worker not supported</div>';
+            }
+        }
+
+        // Test install prompt
+        let deferredPrompt;
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+        });
+
+        function testInstallPrompt() {
+            if (deferredPrompt) {
+                deferredPrompt.prompt();
+                deferredPrompt.userChoice.then((choiceResult) => {
+                    if (choiceResult.outcome === 'accepted') {
+                        alert('User accepted the install prompt');
+                    } else {
+                        alert('User dismissed the install prompt');
+                    }
+                    deferredPrompt = null;
+                });
+            } else {
+                alert('Install prompt not available (already installed or not supported)');
+            }
+        }
+
+        // Test notifications
+        function testNotifications() {
+            if ('Notification' in window) {
+                Notification.requestPermission().then(permission => {
+                    if (permission === 'granted') {
+                        new Notification('Aegis Trader PWA', {
+                            body: 'Notifications are working!',
+                            icon: 'icons/icon-192x192.png'
+                        });
+                    } else {
+                        alert('Notification permission denied');
+                    }
+                });
+            } else {
+                alert('Notifications not supported');
+            }
+        }
+
+        // Update cache
+        function updateCache() {
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.getRegistration().then(registration => {
+                    if (registration) {
+                        registration.update().then(() => {
+                            alert('Cache updated successfully');
+                        });
+                    }
+                });
+            }
+        }
+
+        // Show installation instructions
+        function showInstallInstructions() {
+            const instructionsDiv = document.getElementById('installInstructions');
+            const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+            const isAndroid = /Android/.test(navigator.userAgent);
+
+            let html = '';
+            
+            if (isIOS) {
+                html = `
+                    <h3>📱 iPhone/iPad Installation:</h3>
+                    <ol>
+                        <li>Tap the <strong>Share</strong> button (□↗)</li>
+                        <li>Scroll down and tap <strong>"Add to Home Screen"</strong></li>
+                        <li>Tap <strong>"Add"</strong></li>
+                    </ol>
+                `;
+            } else if (isAndroid) {
+                html = `
+                    <h3>📱 Android Installation:</h3>
+                    <ol>
+                        <li>Tap the <strong>menu</strong> (⋮) in Chrome</li>
+                        <li>Tap <strong>"Add to Home screen"</strong></li>
+                        <li>Tap <strong>"Add"</strong></li>
+                    </ol>
+                `;
+            } else {
+                html = `
+                    <h3>💻 Desktop Installation:</h3>
+                    <p>Look for an install button in your browser's address bar, or check the browser menu for "Install Aegis Trader" option.</p>
+                `;
+            }
+
+            instructionsDiv.innerHTML = html;
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            checkPWAFeatures();
+            checkServiceWorker();
+            showInstallInstructions();
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,4 @@
+# file: C:\Users\bathini bona\Documents\Aegis Trader\backend\modules\emergency_stop.py
+# hypothesis_version: 6.151.9
+
+['actions_taken', 'active', 'authorized_by', 'message', 'note', 'reason', 'success', 'timestamp']

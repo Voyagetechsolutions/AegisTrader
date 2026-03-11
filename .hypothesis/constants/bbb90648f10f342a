@@ -1,0 +1,4 @@
+# file: C:\Users\bathini bona\Documents\Aegis Trader\backend\modules\__init__.py
+# hypothesis_version: 6.151.9
+
+['ConfluenceResult', 'check_news_blackout', 'check_risk', 'check_spread', 'close_all_trades', 'close_trade', 'disable_auto_trading', 'get_active_session', 'get_average_spread', 'handle_tp1', 'handle_tp2', 'is_within_session', 'open_trade', 'process_signal', 'record_spread', 'score_from_payload', 'score_setup', 'send_message', 'send_signal_alert']

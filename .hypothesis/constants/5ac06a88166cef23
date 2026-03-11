@@ -1,0 +1,4 @@
+# file: C:\Users\bathini bona\AppData\Roaming\Python\Python314\site-packages\telegram\_files\inputmedia.py
+# hypothesis_version: 6.151.9
+
+['FileInput | Audio', 'FileInput | Document', 'FileInput | None', 'FileInput | Video', '_duration', 'caption', 'caption_entities', 'cover', 'duration', 'has_spoiler', 'height', 'media', 'parse_mode', 'performer', 'start_timestamp', 'supports_streaming', 'thumbnail', 'title', 'type', 'width']

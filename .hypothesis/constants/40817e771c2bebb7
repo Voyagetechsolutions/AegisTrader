@@ -1,0 +1,4 @@
+# file: C:\Users\bathini bona\Documents\Aegis Trader\backend\strategy\engines\bias_engine.py
+# hypothesis_version: 6.151.9
+
+[0.0, 5.0, 10.0, 100, 'bearish_shift', 'bias_bearish', 'bias_bullish', 'bias_engine', 'bias_neutral', 'bullish_shift', 'direction', 'ema', 'ema_distance', 'price', 'structure_shift', 'structure_shift_bear', 'structure_shift_bull', 'timestamp']
