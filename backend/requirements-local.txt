@@ -1,0 +1,7 @@
+# Local Development Requirements (Windows Only)
+# Use this for local development with MT5 connection
+
+-r requirements.txt
+
+# Windows-only MT5 package
+MetaTrader5>=5.0.45

@@ -32,7 +32,7 @@ redis[hiredis]>=4.5.0
 pandas>=2.0.0
 numpy>=1.24.0
 ta-lib>=0.4.0
-MetaTrader5>=5.0.45
+# MetaTrader5>=5.0.45  # Windows only - not needed for cloud deployment
 
 # Testing (for property-based tests)
 hypothesis>=6.82.0
