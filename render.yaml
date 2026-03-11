@@ -7,10 +7,18 @@ services:
     startCommand: python -m uvicorn backend.main:app --host 0.0.0.0 --port 8000
     envVars:
       - key: DATABASE_URL
-        value: sqlite:///./aegis_trader.db
+        fromDatabase:
+          name: aegis-trader-db
+          property: connectionString
       - key: APP_ENV
         value: production
       - key: TIMEZONE
         value: Africa/Johannesburg
       - key: PYTHON_VERSION
         value: 3.11
+
+databases:
+  - name: aegis-trader-db
+    plan: free
+    databaseName: aegis_trader
+    user: aegis_trader

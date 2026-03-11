@@ -22,8 +22,22 @@ class Settings(BaseSettings):
         description="JWT signing secret"
     )
 
-    # Database (using SQLite for local dev with absolute path)
-    database_url: str = f"sqlite+aiosqlite:///{_DEFAULT_DB_PATH}"
+    # Database (using SQLite for local dev, PostgreSQL for cloud)
+    # Cloud platforms like Render provide DATABASE_URL env var automatically
+    database_url: str = Field(
+        default=f"sqlite+aiosqlite:///{_DEFAULT_DB_PATH}",
+        description="Database connection URL"
+    )
+
+    @field_validator('database_url')
+    @classmethod
+    def convert_database_url(cls, v: str) -> str:
+        """Convert postgres:// to postgresql+asyncpg:// for async support"""
+        if v.startswith('postgres://'):
+            return v.replace('postgres://', 'postgresql+asyncpg://', 1)
+        elif v.startswith('postgresql://'):
+            return v.replace('postgresql://', 'postgresql+asyncpg://', 1)
+        return v
 
     # Telegram
     telegram_bot_token: str = ""
